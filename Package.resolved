@@ -1,5 +1,5 @@
 {
-  "originHash" : "bffd90f2968f50ce3bd8286ee7b7b70678a9ad8c8db967bea74f6435e3b5334d",
+  "originHash" : "4eb04f1e4297cdd13b29cb7f5cf1d72921892414696f00aceda4577636790300",
   "pins" : [
     {
       "identity" : "descriptors",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "f41ce2605a76c5d378fe8c5e8c5c98b544dfd108",
         "version" : "0.2.3"
-      }
-    },
-    {
-      "identity" : "mondrianlayout",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/muukii/MondrianLayout.git",
-      "state" : {
-        "revision" : "5f00b13984fe08316fc5b5be06e2f41c14a3befa",
-        "version" : "0.10.0"
       }
     },
     {
