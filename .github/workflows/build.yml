@@ -4,20 +4,20 @@ on: [push]
 
 jobs:
   build-storybook-kit:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "16.0"
+          xcode-version: "16.2"
       - uses: actions/checkout@v2
       - name: xcodebuild
         run: set -o pipefail && xcodebuild -scheme StorybookKit -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' | xcbeautify
   build-storybook-kit-texture-support:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "16.0"
+          xcode-version: "16.2"
       - uses: actions/checkout@v2
       - name: xcodebuild
         run: set -o pipefail && xcodebuild -scheme StorybookKitTextureSupport -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' | xcbeautify
