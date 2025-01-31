@@ -182,11 +182,3 @@ final class _ViewController<Content: View>: UIViewController {
   }
 
 }
-
-#if DEBUG
-
-#Preview {
-  BookActionHosting { BookAction(title: "Hello", action: { vc in }) }
-}
-
-#endif
