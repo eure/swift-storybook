@@ -19,22 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import SwiftUI
 
-import Foundation
-import StorybookKit
-
-final class FilledLabel: MyLabel {
-  
-  public required init(title: String) {
-    super.init(title: title)
-    
-    backgroundColor = UIColor.systemRed.withAlphaComponent(0.2)
-    layer.borderColor = UIColor.systemRed.cgColor
-    layer.borderWidth = 1.0
-  }
-  
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
+#Preview("Circle") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
 }

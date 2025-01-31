@@ -19,34 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
-import StorybookKit
 import SwiftUI
-import SwiftUISupport
 
-struct RootView: View {
-
-  var body: some View {
-    StorybookDisplayRootView(
-      bookStore: .init(
-        book: .init(title: "Storybook Demo") {
-
-          myBook
-
-          Book(title: "#StorybookPage macro") {
-            Book.allStorybookPages()
-              .map({ $0.bookBody })
-          }
-
-          if #available(iOS 17.0, *) {
-            if let nodes = Book.allBookPreviews() {
-              Book(title: "#Preview macro") {
-                nodes
-              }
-            }
-          }
-        }
-      )
-    )
-  }
+#Preview("Circle") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
 }
