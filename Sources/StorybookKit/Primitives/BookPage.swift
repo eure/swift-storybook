@@ -56,21 +56,24 @@ public struct BookPage: BookView, Identifiable {
     declarationIdentifier
   }
 
+  public let usesScrollView: Bool
   public let title: String
   public let destination: AnyView
   public nonisolated let declarationIdentifier: DeclarationIdentifier
   private let fileID: any StringProtocol
-  private let line: any FixedWidthInteger
+  private let line: any FixedWidthInteger  
 
   public init<Destination: View>(
     _ fileID: any StringProtocol = #fileID,
     _ line: any FixedWidthInteger = #line,
     title: String,
+    usesScrollView: Bool = true,
     @ViewBuilder destination: @MainActor () -> Destination
   ) {
     self.fileID = fileID
     self.line = line
     self.title = title
+    self.usesScrollView = usesScrollView
     self.destination = AnyView(destination())
     self.declarationIdentifier = .init()
   }
@@ -78,8 +81,14 @@ public struct BookPage: BookView, Identifiable {
   public var body: some View {
 
     NavigationLink {
-      ScrollView {
-        destination
+      Group {
+        if usesScrollView {
+          ScrollView {
+            destination
+          }
+        } else {
+          destination
+        }
       }
       .listStyle(.plain)
       .navigationTitle(title)
@@ -88,16 +97,27 @@ public struct BookPage: BookView, Identifiable {
         context?.onOpen(pageID: id)
       })
     } label: {
-      HStack {
-        Image.init(systemName: "doc")
-        VStack(alignment: .leading) {
-          Text(title)
-          Text("\(fileID):\(line)")
-            .font(.caption.monospacedDigit())
-            .opacity(0.8)
-        }
-      }
+      LinkLabel(title: title, fileID: fileID, line: line)
     }
 
+  }
+}
+
+private struct LinkLabel: View {
+  
+  let title: any StringProtocol
+  let fileID: any StringProtocol
+  let line: any FixedWidthInteger
+
+  var body: some View {
+    HStack {
+      Image.init(systemName: "doc")
+      VStack(alignment: .leading) {
+        Text(title)
+        Text("\(fileID):\(line)")
+          .font(.caption.monospacedDigit())
+          .opacity(0.8)
+      }
+    }
   }
 }

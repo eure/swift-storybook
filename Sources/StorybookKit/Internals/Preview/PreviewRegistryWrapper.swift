@@ -17,6 +17,15 @@ struct PreviewRegistryWrapper: Comparable {
   var fileID: String { previewType.fileID }
   var line: Int { previewType.line }
   var column: Int { previewType.column }
+  
+  @MainActor
+  var displayName: String? {
+    guard let rawPreview = try? previewType.makePreview() else {
+      return nil
+    }
+    let preview: FieldReader = .init(rawPreview)
+    return preview["displayName"]
+  }
 
   @MainActor
   var makeView: (@MainActor () -> any View) {
