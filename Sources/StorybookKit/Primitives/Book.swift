@@ -20,6 +20,15 @@ public struct Book: BookView, Identifiable {
       case .page(let v): return v.title
       }
     }
+
+    @MainActor
+    var children: [Node]? {
+      switch self {
+      case .folder(let v): return v.contents
+      case .page: return nil
+      }
+    }
+
   }
 
   public var id: UUID = .init()
@@ -70,23 +79,21 @@ public struct Book: BookView, Identifiable {
 
   public var body: some View {
     ForEach(contents) { node in
-      switch node {
-      case .folder(let folder):
-        NavigationLink {
-          List {
-            folder
-          }
-          .navigationTitle(folder.title)
-          .navigationBarTitleDisplayMode(.inline)
-        } label: {
+
+      NodeOutlineGroup(node, children: \.children) { content in
+        switch content {
+        case .folder(let folder):
+
           HStack {
-            Image.init(systemName: "folder")
+            Image.init(systemName: "folder.fill")
             Text(folder.title)
           }
+
+        case .page(let page):
+          page
         }
-      case .page(let page):
-        page
       }
+
     }
   }
 
@@ -105,17 +112,17 @@ public struct Book: BookView, Identifiable {
 
 // MARK: Runtime creation
 extension Book {
-    
+
   /// All conformers to `BookProvider`, including those declared from the `#StorybookPage` macro
   public static func allBookProviders() -> [any BookProvider.Type] {
     self.findAllBookProviders(filterByStorybookPageMacro: false) ?? []
   }
-  
+
   /// All conformers to `BookProvider` that were declared from the `#StorybookPage` macro
   public static func allStorybookPages() -> [any BookProvider.Type] {
     self.findAllBookProviders(filterByStorybookPageMacro: true) ?? []
   }
-  
+
   /// All `#Preview`s as `BookPage`s
   @available(iOS 17.0, *)
   public static func allBookPreviews() -> [Node]? {
@@ -134,36 +141,39 @@ extension Book {
           title: module,
           contents: { [fileIDs = fileIDsByModule[module]!.sorted()] in
             fileIDs.map { fileID in
-              
+
               let name = String(fileID[fileID.index(after: module.endIndex)...])
               let registries = registriesByFileID[fileID]!
-              
-              return Node.folder(.init(title: name, contents: {
-                registries.map { registry in
-                  
-                  let pageName: String
-                  
-                  if let displayName = registry.displayName {
-                    pageName = "\(displayName)"
-                  } else {
-                    pageName = "line: \(registry.line)"                
-                  }
-                  
-                  return Node.page(
-                    .init(
-                      fileID,
-                      registry.line,
-                      title: pageName,
-                      usesScrollView: false,
-                      destination: {
-                        AnyView(registry.makeView())
+
+              return Node.folder(
+                .init(
+                  title: name,
+                  contents: {
+                    registries.map { registry in
+
+                      let pageName: String
+
+                      if let displayName = registry.displayName {
+                        pageName = "\(displayName)"
+                      } else {
+                        pageName = "line: \(registry.line)"
                       }
-                    )
-                  )
-                  
-                }
-              }))
-              
+
+                      return Node.page(
+                        .init(
+                          fileID,
+                          registry.line,
+                          title: pageName,
+                          usesScrollView: false,
+                          destination: {
+                            AnyView(registry.makeView())
+                          }
+                        )
+                      )
+
+                    }
+                  }))
+
             }
           }
         )
@@ -244,4 +254,38 @@ public struct FolderBuilder {
     elements.compactMap { $0 }
   }
 
+}
+
+private struct NodeOutlineGroup<Node, Content>: View where Node: Identifiable, Content: View {
+
+  let node: Node
+  let childKeyPath: KeyPath<Node, [Node]?>
+
+  @State var isExpanded: Bool = true
+
+  let content: (Node) -> Content
+
+  init(
+    _ node: Node, children childKeyPath: KeyPath<Node, [Node]?>,
+    @ViewBuilder content: @escaping (Node) -> Content
+  ) {
+    self.node = node
+    self.childKeyPath = childKeyPath
+    self.content = content
+  }
+
+  var body: some View {
+    if node[keyPath: childKeyPath] != nil {
+      DisclosureGroup(
+        isExpanded: $isExpanded,
+        content: {
+          ForEach(node[keyPath: childKeyPath]!) { childNode in
+            NodeOutlineGroup(childNode, children: childKeyPath, content: content)
+          }
+        },
+        label: { content(node) })
+    } else {
+      content(node)
+    }
+  }
 }
