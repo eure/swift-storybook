@@ -27,71 +27,6 @@ public struct Book: BookView, Identifiable {
   public let title: String
   public let contents: [Node]
 
-  /// All `#Preview`s as `BookPage`s
-  @available(iOS 17.0, *)
-  public static func allBookPreviews() -> [Node]? {
-    guard let sortedPreviewRegistries = self.findAllPreviews() else {
-      return nil
-    }
-    var fileIDsByModule: [String: Set<String>] = [:]
-    var registriesByFileID: [String: [PreviewRegistryWrapper]] = [:]
-    for item in sortedPreviewRegistries {
-      fileIDsByModule[item.module, default: []].insert(item.fileID)
-      registriesByFileID[item.fileID, default: []].append(item)
-    }
-    return fileIDsByModule.keys.sorted().map { module in
-      return Node.folder(
-        .init(
-          title: module,
-          contents: { [fileIDs = fileIDsByModule[module]!.sorted()] in
-            fileIDs.map { fileID in
-
-              let name = String(fileID[fileID.index(after: module.endIndex)...])
-              let registries = registriesByFileID[fileID]!
-              
-              return Node.folder(.init(title: name, contents: {
-                registries.map { registry in
-                  
-                  let pageName: String
-                  
-                  if let displayName = registry.displayName {
-                    pageName = "\(displayName)"
-                  } else {
-                    pageName = "line: \(registry.line)"                
-                  }
-                  
-                  return Node.page(
-                    .init(
-                      fileID,
-                      registry.line,
-                      title: pageName,
-                      usesScrollView: false,
-                      destination: {
-                        AnyView(registry.makeView())
-                      }
-                    )
-                  )
-                  
-                }
-              }))
-             
-            }
-          }
-        )
-      )
-    }
-  }
-
-  /// All conformers to `BookProvider`, including those declared from the `#StorybookPage` macro
-  public static func allBookProviders() -> [any BookProvider.Type] {
-    self.findAllBookProviders(filterByStorybookPageMacro: false) ?? []
-  }
-
-  /// All conformers to `BookProvider` that were declared from the `#StorybookPage` macro
-  public static func allStorybookPages() -> [any BookProvider.Type] {
-    self.findAllBookProviders(filterByStorybookPageMacro: true) ?? []
-  }
-
   public init(
     title: String,
     @FolderBuilder contents: () -> [Node]
@@ -163,6 +98,76 @@ public struct Book: BookView, Identifiable {
       case .page(let page):
         return [page]
       }
+    }
+  }
+
+}
+
+// MARK: Runtime creation
+extension Book {
+    
+  /// All conformers to `BookProvider`, including those declared from the `#StorybookPage` macro
+  public static func allBookProviders() -> [any BookProvider.Type] {
+    self.findAllBookProviders(filterByStorybookPageMacro: false) ?? []
+  }
+  
+  /// All conformers to `BookProvider` that were declared from the `#StorybookPage` macro
+  public static func allStorybookPages() -> [any BookProvider.Type] {
+    self.findAllBookProviders(filterByStorybookPageMacro: true) ?? []
+  }
+  
+  /// All `#Preview`s as `BookPage`s
+  @available(iOS 17.0, *)
+  public static func allBookPreviews() -> [Node]? {
+    guard let sortedPreviewRegistries = self.findAllPreviews() else {
+      return nil
+    }
+    var fileIDsByModule: [String: Set<String>] = [:]
+    var registriesByFileID: [String: [PreviewRegistryWrapper]] = [:]
+    for item in sortedPreviewRegistries {
+      fileIDsByModule[item.module, default: []].insert(item.fileID)
+      registriesByFileID[item.fileID, default: []].append(item)
+    }
+    return fileIDsByModule.keys.sorted().map { module in
+      return Node.folder(
+        .init(
+          title: module,
+          contents: { [fileIDs = fileIDsByModule[module]!.sorted()] in
+            fileIDs.map { fileID in
+              
+              let name = String(fileID[fileID.index(after: module.endIndex)...])
+              let registries = registriesByFileID[fileID]!
+              
+              return Node.folder(.init(title: name, contents: {
+                registries.map { registry in
+                  
+                  let pageName: String
+                  
+                  if let displayName = registry.displayName {
+                    pageName = "\(displayName)"
+                  } else {
+                    pageName = "line: \(registry.line)"                
+                  }
+                  
+                  return Node.page(
+                    .init(
+                      fileID,
+                      registry.line,
+                      title: pageName,
+                      usesScrollView: false,
+                      destination: {
+                        AnyView(registry.makeView())
+                      }
+                    )
+                  )
+                  
+                }
+              }))
+              
+            }
+          }
+        )
+      )
     }
   }
 
