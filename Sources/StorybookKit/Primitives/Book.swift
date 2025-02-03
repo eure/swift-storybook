@@ -45,24 +45,36 @@ public struct Book: BookView, Identifiable {
           title: module,
           contents: { [fileIDs = fileIDsByModule[module]!.sorted()] in
             fileIDs.map { fileID in
-              return Node.page(
-                .init(
-                  fileID,
-                  0,
-                  title: .init(fileID[fileID.index(after: module.endIndex)...]),
-                  destination: { [registries = registriesByFileID[fileID]!] in
-                    LazyVStack(
-                      alignment: .center,
-                      spacing: 16,
-                      pinnedViews: .sectionHeaders
-                    ) {
-                      ForEach.inefficient(items: registries) { registry in
+
+              let name = String(fileID[fileID.index(after: module.endIndex)...])
+              let registries = registriesByFileID[fileID]!
+              
+              return Node.folder(.init(title: name, contents: {
+                registries.map { registry in
+                  
+                  let pageName: String
+                  
+                  if let displayName = registry.displayName {
+                    pageName = "\(displayName)"
+                  } else {
+                    pageName = "line: \(registry.line)"                
+                  }
+                  
+                  return Node.page(
+                    .init(
+                      fileID,
+                      registry.line,
+                      title: pageName,
+                      usesScrollView: false,
+                      destination: {
                         AnyView(registry.makeView())
                       }
-                    }
-                  }
-                )
-              )
+                    )
+                  )
+                  
+                }
+              }))
+             
             }
           }
         )
@@ -89,7 +101,8 @@ public struct Book: BookView, Identifiable {
 
     let _contents = contents()
 
-    let folders = _contents
+    let folders =
+      _contents
       .filter {
         switch $0 {
         case .folder:
@@ -102,7 +115,8 @@ public struct Book: BookView, Identifiable {
         a.sortingKey < b.sortingKey
       }
 
-    let pages = _contents
+    let pages =
+      _contents
       .filter {
         switch $0 {
         case .folder:
@@ -160,7 +174,9 @@ public struct FolderBuilder {
   public typealias Element = Book.Node
 
   @MainActor
-  public static func buildExpression<Provider: BookProvider>(_ expression: Provider.Type) -> [FolderBuilder.Element] {
+  public static func buildExpression<Provider: BookProvider>(_ expression: Provider.Type)
+    -> [FolderBuilder.Element]
+  {
     return [.page(expression.bookBody)]
   }
 
@@ -184,7 +200,8 @@ public struct FolderBuilder {
     []
   }
 
-  public static func buildBlock<C: Collection>(_ contents: C...) -> [Element] where C.Element == Element {
+  public static func buildBlock<C: Collection>(_ contents: C...) -> [Element]
+  where C.Element == Element {
     return contents.flatMap { $0 }
   }
 
@@ -212,11 +229,13 @@ public struct FolderBuilder {
     return [element]
   }
 
-  public static func buildExpression<C: Collection>(_ elements: C) -> [Element] where C.Element == Element {
+  public static func buildExpression<C: Collection>(_ elements: C) -> [Element]
+  where C.Element == Element {
     Array(elements)
   }
 
-  public static func buildExpression<C: Collection>(_ elements: C) -> [Element] where C.Element == Optional<Element> {
+  public static func buildExpression<C: Collection>(_ elements: C) -> [Element]
+  where C.Element == Element? {
     elements.compactMap { $0 }
   }
 
