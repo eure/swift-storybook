@@ -101,7 +101,7 @@ public struct Book: BookView, Identifiable {
       HStack {
         Text(title)
         Spacer()
-        Button("Expand All") {
+        Button(isExpandedAll ? " Collapse All" : " Expand All") {
           isExpandedAll.toggle()
         }
         .font(.caption)
