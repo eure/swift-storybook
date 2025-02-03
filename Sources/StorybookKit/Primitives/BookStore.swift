@@ -34,7 +34,7 @@ public final class BookStore: ObservableObject {
 
     let _pages = indexes.compactMap { (index: Int) -> BookPage? in
       let id = DeclarationIdentifier(raw: index)
-      guard let page = allPages[.init(raw: index)] else {
+      guard let page = allPages[id] else {
         return nil
       }
       return page
@@ -64,8 +64,7 @@ public final class BookStore: ObservableObject {
 
     print("Update history", current)
 
-    // TODO: fix - it makes UI state broken
-//    updateHistory()
+    updateHistory()
   }
 
   nonisolated func search(query: String) async -> [BookPage] {
