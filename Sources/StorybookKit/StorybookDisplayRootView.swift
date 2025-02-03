@@ -86,11 +86,7 @@ struct BookContainer: View {
           Text("History")
         }
 
-        Section {
-          store.book
-        } header: {
-          Text("Contents")
-        }
+        store.book      
 
       }
       .navigationTitle(store.title)

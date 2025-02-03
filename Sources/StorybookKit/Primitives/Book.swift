@@ -35,6 +35,8 @@ public struct Book: BookView, Identifiable {
 
   public let title: String
   public let contents: [Node]
+  
+  @State private var isExpandedAll: Bool = false
 
   public init(
     title: String,
@@ -78,23 +80,34 @@ public struct Book: BookView, Identifiable {
   }
 
   public var body: some View {
-    ForEach(contents) { node in
-
-      NodeOutlineGroup(node, children: \.children) { content in
-        switch content {
-        case .folder(let folder):
-
-          HStack {
-            Image.init(systemName: "folder.fill")
-            Text(folder.title)
+    Section { 
+      ForEach(contents) { node in
+        NodeOutlineGroup(expandsAll: isExpandedAll, node, children: \.children) { content in
+          switch content {
+          case .folder(let folder):
+            
+            HStack {
+              Image.init(systemName: "folder.fill")
+              Text(folder.title)
+            }
+            
+          case .page(let page):
+            page             
           }
-
-        case .page(let page):
-          page
         }
+        
       }
-
+    } header: {
+      HStack {
+        Text(title)
+        Spacer()
+        Button("Expand All") {
+          isExpandedAll.toggle()
+        }
+        .font(.caption)
+      }
     }
+   
   }
 
   func allPages() -> [BookPage] {
@@ -261,31 +274,52 @@ private struct NodeOutlineGroup<Node, Content>: View where Node: Identifiable, C
   let node: Node
   let childKeyPath: KeyPath<Node, [Node]?>
 
-  @State var isExpanded: Bool = true
+  let expandsAll: Bool
+  
+  @State var isExpanded: Bool
 
   let content: (Node) -> Content
 
   init(
+    expandsAll: Bool,
     _ node: Node, children childKeyPath: KeyPath<Node, [Node]?>,
     @ViewBuilder content: @escaping (Node) -> Content
   ) {
+    self._isExpanded = .init(wrappedValue: expandsAll)
+    self.expandsAll = expandsAll
     self.node = node
     self.childKeyPath = childKeyPath
     self.content = content
   }
 
   var body: some View {
-    if node[keyPath: childKeyPath] != nil {
-      DisclosureGroup(
-        isExpanded: $isExpanded,
-        content: {
-          ForEach(node[keyPath: childKeyPath]!) { childNode in
-            NodeOutlineGroup(childNode, children: childKeyPath, content: content)
+    Group {
+      if node[keyPath: childKeyPath] != nil {
+        DisclosureGroup(
+          isExpanded: $isExpanded,
+          content: {
+            ForEach(node[keyPath: childKeyPath]!) { childNode in
+              NodeOutlineGroup(
+                expandsAll: expandsAll,
+                childNode,
+                children: childKeyPath,
+                content: content
+              )
+            }
+          },
+          label: { 
+            content(node)              
           }
-        },
-        label: { content(node) })
-    } else {
-      content(node)
+        )
+       
+      } else {
+        content(node)
+      }
+    }
+    .onChange(of: expandsAll) { value in
+      withAnimation(.default) {
+        isExpanded = value
+      }
     }
   }
 }

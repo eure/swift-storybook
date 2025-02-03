@@ -98,8 +98,13 @@ public struct BookPage: BookView, Identifiable {
       })
     } label: {
       LinkLabel(title: title, fileID: fileID, line: line)
+        .contextMenu(menuItems: {
+          Text(title)
+        }) { 
+          destination
+        }
     }
-
+   
   }
 }
 
