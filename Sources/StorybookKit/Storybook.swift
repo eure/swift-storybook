@@ -10,10 +10,10 @@ public struct Storybook: View  {
   public var body: some View {
     StorybookDisplayRootView(
       bookStore: .init(
-        book: .init(title: "Storybook") {
+        book: Book.init(title: "Contents") {
           
           if let nodes = Book.allBookPreviews() {
-            Book(title: "#Preview macro") {
+            Book(title: "#Preview") {
               nodes
             }
           }
