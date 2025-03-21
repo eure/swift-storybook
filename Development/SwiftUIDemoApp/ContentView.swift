@@ -27,7 +27,3 @@ struct ContentView: View {
     Storybook()
   }
 }
-
-#Preview {
-  ContentView()
-}
