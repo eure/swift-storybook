@@ -87,7 +87,7 @@ public struct BookPage: BookView, Identifiable {
             destination
           }
         } else {
-          destination
+          destination         
         }
       }
       .listStyle(.plain)

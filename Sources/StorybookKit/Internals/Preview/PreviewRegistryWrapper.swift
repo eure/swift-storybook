@@ -89,16 +89,24 @@ struct PreviewRegistryWrapper: Comparable {
     case "DeveloperToolsSupport.DefaultPreviewSource<SwiftUI.ViewPreviewBody>": // iOS 18
       let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["structure", "singlePreview", "makeBody"])
       return {
-        VStack {
-          if let title, !title.isEmpty {
-            Text(title)
-              .font(.system(size: 17, weight: .semibold))
-          }
+        VStack {         
           AnyView(makeBody())
-          Text("\(fileID):\(line)")
-            .font(.caption.monospacedDigit())
-          BookSpacer(height: 16)
-        }
+            .toolbar { 
+              ToolbarItem(placement: .topBarTrailing) { 
+                Menu { 
+                  Button { 
+                    UIPasteboard.general.string = "\(fileID):\(line)"
+                  } label: { 
+                    Text("\(fileID):\(line)")
+                      .font(.caption.monospacedDigit())
+                  }
+                } label: {                   
+                  Image(systemName: "info.circle")                  
+                }
+
+              }
+            }         
+        }        
       }
 
     case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>": // iOS 18
