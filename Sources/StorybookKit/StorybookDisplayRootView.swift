@@ -42,15 +42,35 @@ public struct BookActionHosting<Content: View>: View {
 }
 
 struct BookContainer: View {
-
+  
+  struct UniqueBox<T>: Hashable {
+    
+    static func == (lhs: UniqueBox<T>, rhs: UniqueBox<T>) -> Bool {
+      lhs.uuid == rhs.uuid
+    }
+    
+    func hash(into hasher: inout Hasher) {
+      hasher.combine(uuid)
+    }
+    
+    let uuid: UUID = .init()
+    let value: T
+    
+    init(value: T) {
+      self.value = value
+    }
+  }
+    
   // MARK: Properties
   
   @ObservedObject private var store: BookStore
   
-  @State private var lastUsedItem: BookPage?      
+  @State private var lastUsedItem: UniqueBox<BookPage>?      
   @State private var query: String = ""
   @State private var result: [BookPage] = []
   @State private var currentTask: Task<Void, Error>?
+  
+  @State var path: NavigationPath = .init()
   
   // MARK: Initializers
   
@@ -65,7 +85,7 @@ struct BookContainer: View {
 
   public var body: some View {
 
-    NavigationStack {
+    NavigationStack(path: $path) {
       List {
         
         if result.isEmpty == false {
@@ -91,15 +111,23 @@ struct BookContainer: View {
       }
       .navigationTitle(store.title)
       .searchable(text: $query, prompt: "Search")
-        
+      .navigationDestination(for: UniqueBox<BookPage>.self) { page in
+        page
+          .value
+          .destination
+          .environment(\.bookContext, store)
+      }
     }
+    
     .tabItem {
       Image(systemName: "list.bullet")
       Text("List")
     }
     .environment(\.bookContext, store)
     .onAppear {
-      lastUsedItem = store.historyPages.first
+      if let value = store.historyPages.first {
+        path.append(UniqueBox(value: value))
+      }
     }
     .onChange(of: query, perform: { value in
       
@@ -123,13 +151,7 @@ struct BookContainer: View {
         self.result = result
       }
       
-    })
-    .sheet(item: $lastUsedItem) { item in
-      ScrollView {
-        item.destination
-          .padding(.vertical, 24)
-      }
-    }
+    })    
   }
 
 }
