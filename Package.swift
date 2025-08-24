@@ -18,7 +18,7 @@ let package = Package(
     .package(url: "https://github.com/FluidGroup/TextureSwiftSupport.git", from: "3.20.1"),
     .package(url: "https://github.com/FluidGroup/swiftui-support", from: "0.4.1"),
     .package(url: "https://github.com/FluidGroup/ResultBuilderKit", from: "1.3.0"),
-    .package(url: "https://github.com/apple/swift-syntax.git", from: "600.0.1"),
+    .package(url: "https://github.com/apple/swift-syntax.git", "600.0.0"..<"602.0.0"),
     .package(url: "https://github.com/pointfreeco/swift-macro-testing.git", from: "0.5.2"),
   ],
   targets: [
