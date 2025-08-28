@@ -62,17 +62,47 @@ struct PreviewRegistryWrapper: Comparable {
           }
         }
 
-      case "UIKit.View":
-        let makeBody: MakeFunctionWrapper<UIKit.UIView> = .init(source["preview", "structure", "singlePreview", "makeBody"])
-        return {
-          BookPreview(
-            fileID,
-            line,
-            title: title.flatMap({ $0.isEmpty ? nil : $0 }),
-            viewBlock: { _ in
-              makeBody()
+      case "UIKit.View": // includes UIViewControllers
+        switch source["preview"]!.typeName {
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>":
+          let makeBody: MakeFunctionWrapper<UIKit.UIView> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return {
+            BookPreview(
+              fileID,
+              line,
+              title: title.flatMap({ $0.isEmpty ? nil : $0 }),
+              viewBlock: { _ in
+                makeBody()
+              }
+            )
+          }
+
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>":
+          let makeBody: MakeFunctionWrapper<UIKit.UIViewController> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return {
+            BookPresent(
+              title: title.flatMap({ $0.isEmpty ? nil : $0 }) ?? source.typeName,
+              presentingViewControllerBlock: {
+                makeBody()
+              }
+            )
+          }
+
+        case let previewTypeName:
+          return {
+            VStack {
+              if let title, !title.isEmpty {
+                Text(title)
+                  .font(.system(size: 17, weight: .semibold))
+              }
+              Text("Failed to load preview (preview.typeName = \(previewTypeName))")
+                .foregroundStyle(Color.red)
+                .font(.caption.monospacedDigit())
+              Text("\(fileID):\(line)")
+                .font(.caption.monospacedDigit())
+              BookSpacer(height: 16)
             }
-          )
+          }
         }
 
       case let contentCategory:
