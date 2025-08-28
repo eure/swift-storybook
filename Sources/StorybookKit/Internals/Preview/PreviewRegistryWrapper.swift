@@ -34,8 +34,141 @@ struct PreviewRegistryWrapper: Comparable {
     }
     let preview: FieldReader = .init(rawPreview)
     let title: String? = preview["displayName"]
-    let source: FieldReader = preview["source"]
+    let source: FieldReader = (preview["source"] ?? preview["dataSource"])!
     switch source.typeName {
+
+    case "DeveloperToolsSupport.Preview.DataSource": // iOS 26
+      switch source["preview", "contentCategory", "rawValue"] as String {
+      case "SwiftUI.View":
+        let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+        return {
+          VStack {
+            AnyView(makeBody())
+              .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                  Menu {
+                    Button {
+                      UIPasteboard.general.string = "\(fileID):\(line)"
+                    } label: {
+                      Text("\(fileID):\(line)")
+                        .font(.caption.monospacedDigit())
+                    }
+                  } label: {
+                    Image(systemName: "info.circle")
+                  }
+
+                }
+              }
+          }
+        }
+
+      case "UIKit.View": // includes UIViewControllers
+        switch source["preview"]!.typeName {
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>":
+          let makeBody: MakeFunctionWrapper<UIKit.UIView> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return {
+            BookPreview(
+              fileID,
+              line,
+              title: title.flatMap({ $0.isEmpty ? nil : $0 }),
+              viewBlock: { _ in
+                makeBody()
+              }
+            )
+          }
+
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>":
+          let makeBody: MakeFunctionWrapper<UIKit.UIViewController> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return {
+            BookPresent(
+              title: title.flatMap({ $0.isEmpty ? nil : $0 }) ?? source.typeName,
+              presentingViewControllerBlock: {
+                makeBody()
+              }
+            )
+          }
+
+        case let previewTypeName:
+          return {
+            VStack {
+              if let title, !title.isEmpty {
+                Text(title)
+                  .font(.system(size: 17, weight: .semibold))
+              }
+              Text("Failed to load preview (preview.typeName = \(previewTypeName))")
+                .foregroundStyle(Color.red)
+                .font(.caption.monospacedDigit())
+              Text("\(fileID):\(line)")
+                .font(.caption.monospacedDigit())
+              BookSpacer(height: 16)
+            }
+          }
+        }
+
+      case let contentCategory:
+        return {
+          VStack {
+            if let title, !title.isEmpty {
+              Text(title)
+                .font(.system(size: 17, weight: .semibold))
+            }
+            Text("Failed to load preview (DeveloperToolsSupport.PreviewSourceContentCategory = \(contentCategory))")
+              .foregroundStyle(Color.red)
+              .font(.caption.monospacedDigit())
+            Text("\(fileID):\(line)")
+              .font(.caption.monospacedDigit())
+            BookSpacer(height: 16)
+          }
+        }
+
+      }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<SwiftUI.ViewPreviewBody>": // iOS 18
+      let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["structure", "singlePreview", "makeBody"])
+      return {
+        VStack {
+          AnyView(makeBody())
+            .toolbar {
+              ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                  Button {
+                    UIPasteboard.general.string = "\(fileID):\(line)"
+                  } label: {
+                    Text("\(fileID):\(line)")
+                      .font(.caption.monospacedDigit())
+                  }
+                } label: {
+                  Image(systemName: "info.circle")
+                }
+
+              }
+            }
+        }
+      }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>": // iOS 18
+      let makeBody: MakeFunctionWrapper<UIView> = .init(source["structure", "singlePreview", "makeBody"])
+      return {
+        BookPreview(
+          fileID,
+          line,
+          title: title.flatMap({ $0.isEmpty ? nil : $0 }),
+          viewBlock: { _ in
+            makeBody()
+          }
+        )
+      }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>": // iOS 18
+      let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["structure", "singlePreview", "makeBody"])
+      return {
+        BookPresent(
+          title: title.flatMap({ $0.isEmpty ? nil : $0 }) ?? source.typeName,
+          presentingViewControllerBlock: {
+            makeBody()
+          }
+        )
+      }
 
     case "SwiftUI.ViewPreviewSource": // iOS 17
       let makeView: MakeFunctionWrapper<any SwiftUI.View> = .init(source["makeView"])
@@ -84,53 +217,6 @@ struct PreviewRegistryWrapper: Comparable {
             .font(.caption.monospacedDigit())
           BookSpacer(height: 16)
         }
-      }
-
-    case "DeveloperToolsSupport.DefaultPreviewSource<SwiftUI.ViewPreviewBody>": // iOS 18
-      let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["structure", "singlePreview", "makeBody"])
-      return {
-        VStack {         
-          AnyView(makeBody())
-            .toolbar { 
-              ToolbarItem(placement: .topBarTrailing) { 
-                Menu { 
-                  Button { 
-                    UIPasteboard.general.string = "\(fileID):\(line)"
-                  } label: { 
-                    Text("\(fileID):\(line)")
-                      .font(.caption.monospacedDigit())
-                  }
-                } label: {                   
-                  Image(systemName: "info.circle")                  
-                }
-
-              }
-            }         
-        }        
-      }
-
-    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>": // iOS 18
-      let makeBody: MakeFunctionWrapper<UIView> = .init(source["structure", "singlePreview", "makeBody"])
-      return {
-        BookPreview(
-          fileID,
-          line,
-          title: title ?? source.typeName,
-          viewBlock: { _ in
-            makeBody()
-          }
-        )
-      }
-
-    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>": // iOS 18
-      let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["structure", "singlePreview", "makeBody"])
-      return {
-        BookPresent(
-          title: title ?? source.typeName,
-          presentingViewControllerBlock: {
-            makeBody()
-          }
-        )
       }
 
     case let sourceTypeName:
@@ -196,8 +282,10 @@ struct PreviewRegistryWrapper: Comparable {
       }
     }
 
-    subscript(_ key: String, _ nextKeys: String...) -> FieldReader {
-      .init(Self.traverse(from: fields[key]!, nextKeys: nextKeys))
+    subscript(_ key: String, _ nextKeys: String...) -> FieldReader? {
+      fields[key].map {
+        .init(Self.traverse(from: $0, nextKeys: nextKeys))
+      }
     }
 
     private let fields: [String: Any]
