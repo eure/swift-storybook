@@ -121,6 +121,21 @@ public struct Book: BookView, Identifiable {
     }
   }
 
+  func allBooks() -> [Book] {
+    var books: [Book] = [self]
+    
+    for node in contents {
+      switch node {
+      case .folder(let folder):
+        books.append(contentsOf: folder.allBooks())
+      case .page:
+        continue
+      }
+    }
+    
+    return books
+  }
+
 }
 
 // MARK: Runtime creation

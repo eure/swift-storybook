@@ -67,7 +67,7 @@ struct BookContainer: View {
   
   @State private var lastUsedItem: UniqueBox<BookPage>?      
   @State private var query: String = ""
-  @State private var result: [BookPage] = []
+  @State private var result: [SearchResult] = []
   @State private var currentTask: Task<Void, Error>?
   
   @State var path: NavigationPath = .init()
@@ -90,8 +90,8 @@ struct BookContainer: View {
         
         if result.isEmpty == false {
           Section {
-            ForEach(result) { link in
-              link
+            ForEach(result) { searchResult in
+              SearchResultView(searchResult: searchResult)
             }
           } header: {
             Text("Search Result")
@@ -154,6 +154,38 @@ struct BookContainer: View {
     })    
   }
 
+}
+
+struct SearchResultView: View {
+  let searchResult: SearchResult
+  @Environment(\.bookContext) var context
+  @State var path: NavigationPath = .init()
+  
+  var body: some View {
+    switch searchResult {
+    case .page(let page):
+      page
+    case .folder(let book):
+      NavigationLink {
+        List {
+          book
+        }
+        .navigationTitle(book.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .environment(\.bookContext, context)
+      } label: {
+        HStack {
+          Image(systemName: "folder.fill")
+          VStack(alignment: .leading) {
+            Text(book.title)
+            Text("Folder")
+              .font(.caption)
+              .opacity(0.8)
+          }
+        }
+      }
+    }
+  }
 }
 
 final class _ViewController<Content: View>: UIViewController {

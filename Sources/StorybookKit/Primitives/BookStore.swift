@@ -1,4 +1,27 @@
 
+public enum SearchResult: Identifiable {
+  case page(BookPage)
+  case folder(Book)
+  
+  public var id: String {
+    switch self {
+    case .page(let page):
+      return "page.\(page.id.index)"
+    case .folder(let book):
+      return "folder.\(book.id)"
+    }
+  }
+  
+  public var title: String {
+    switch self {
+    case .page(let page):
+      return page.title
+    case .folder(let book):
+      return book.title
+    }
+  }
+}
+
 @MainActor
 public final class BookStore: ObservableObject {
 
@@ -8,6 +31,7 @@ public final class BookStore: ObservableObject {
   public let book: Book
 
   private let allPages: [BookPage.ID: BookPage]
+  private let allBooks: [Book.ID: Book]
 
   private let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
 
@@ -20,6 +44,13 @@ public final class BookStore: ObservableObject {
 
     self.allPages = book.allPages().reduce(
       into: [BookPage.ID: BookPage](),
+      { partialResult, item in
+        partialResult[item.id] = item
+      }
+    )
+
+    self.allBooks = book.allBooks().reduce(
+      into: [Book.ID: Book](),
       { partialResult, item in
         partialResult[item.id] = item
       }
@@ -67,19 +98,30 @@ public final class BookStore: ObservableObject {
     updateHistory()
   }
 
-  nonisolated func search(query: String) async -> [BookPage] {
+  nonisolated func search(query: String) async -> [SearchResult] {
 
     // find pages using query but fuzzy
-    let pages = allPages.values
-      .map { page -> (score: Double, page: BookPage) in
+    let pageResults = allPages.values
+      .map { page -> (score: Double, result: SearchResult) in
         let score = page.title.score(word: query)
-        return (score, page)
+        return (score, .page(page))
       }
       .filter { $0.score > 0 }
-      .sorted { $0.score > $1.score }
-      .map { $0.page }
 
-    return pages
+    // find folders using query but fuzzy
+    let folderResults = allBooks.values
+      .map { book -> (score: Double, result: SearchResult) in
+        let score = book.title.score(word: query)
+        return (score, .folder(book))
+      }
+      .filter { $0.score > 0 }
+
+    // combine and sort results
+    let allResults = (pageResults + folderResults)
+      .sorted { $0.score > $1.score }
+      .map { $0.result }
+
+    return allResults
   }
 
 }
