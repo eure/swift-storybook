@@ -58,7 +58,7 @@ public struct BookPage: BookView, Identifiable {
 
   public let usesScrollView: Bool
   public let title: String
-  public let destination: AnyView
+  public let destination: () -> AnyView
   public nonisolated let declarationIdentifier: DeclarationIdentifier
   private let fileID: any StringProtocol
   private let line: any FixedWidthInteger  
@@ -68,13 +68,13 @@ public struct BookPage: BookView, Identifiable {
     _ line: any FixedWidthInteger = #line,
     title: String,
     usesScrollView: Bool = true,
-    @ViewBuilder destination: @MainActor () -> Destination
+    @ViewBuilder destination: @MainActor @escaping () -> Destination
   ) {
     self.fileID = fileID
     self.line = line
     self.title = title
     self.usesScrollView = usesScrollView
-    self.destination = AnyView(destination())
+    self.destination = { AnyView(destination()) }
     self.declarationIdentifier = .init()
   }
 
@@ -84,10 +84,10 @@ public struct BookPage: BookView, Identifiable {
       Group {
         if usesScrollView {
           ScrollView {
-            destination
+            Display(content: destination)
           }
         } else {
-          destination         
+          Display(content: destination)
         }
       }
       .listStyle(.plain)
@@ -98,14 +98,36 @@ public struct BookPage: BookView, Identifiable {
       })
     } label: {
       LinkLabel(title: title, fileID: fileID, line: line)
-        .contextMenu(menuItems: {
-          Text(title)
-        }) { 
-          destination
-        }
+//        .contextMenu(menuItems: {
+//          Text(title)
+//        }) { 
+//          destination
+//        }
     }
    
   }
+}
+
+private struct Display: View {
+  
+  @State var loaded: AnyView?
+  private let content: () -> AnyView
+  
+  init(content: @escaping () -> AnyView) {
+    self.content = content
+  }
+  
+  var body: some View {
+    if let loaded {
+      loaded
+    } else {
+      Color.clear
+        .onAppear(perform: {
+          loaded = content()
+        })
+    }
+  }
+  
 }
 
 private struct LinkLabel: View {

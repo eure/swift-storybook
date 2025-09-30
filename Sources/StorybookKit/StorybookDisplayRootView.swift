@@ -114,7 +114,7 @@ struct BookContainer: View {
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
         page
           .value
-          .destination
+          .destination()
           .environment(\.bookContext, store)
       }
     }
