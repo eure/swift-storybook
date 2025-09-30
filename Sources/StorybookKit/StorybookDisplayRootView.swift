@@ -114,7 +114,7 @@ struct BookContainer: View {
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
         page
           .value
-          .destination
+          .destination()
           .environment(\.bookContext, store)
       }
     }
@@ -123,10 +123,13 @@ struct BookContainer: View {
       Image(systemName: "list.bullet")
       Text("List")
     }
-    .environment(\.bookContext, store)
+    .environment(\.bookContext, store)    
     .onAppear {
-      if let value = store.historyPages.first {
-        path.append(UniqueBox(value: value))
+      // Use Task to hop as somehow iOS26 gets hangs when back to top by using back button.
+      Task {
+        if let value = store.historyPages.first {
+          path.append(UniqueBox(value: value))
+        }
       }
     }
     .onChange(of: query, perform: { value in
