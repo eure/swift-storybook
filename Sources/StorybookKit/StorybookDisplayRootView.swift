@@ -42,34 +42,40 @@ public struct BookActionHosting<Content: View>: View {
 }
 
 struct BookContainer: View {
-  
+
+  private static let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
+
   struct UniqueBox<T>: Hashable {
-    
+
     static func == (lhs: UniqueBox<T>, rhs: UniqueBox<T>) -> Bool {
       lhs.uuid == rhs.uuid
     }
-    
+
     func hash(into hasher: inout Hasher) {
       hasher.combine(uuid)
     }
-    
+
     let uuid: UUID = .init()
     let value: T
-    
+
     init(value: T) {
       self.value = value
     }
   }
-    
+
   // MARK: Properties
-  
+
   @ObservedObject private var store: BookStore
-  
+
+  @AppStorage("autoOpenLastPage", store: BookContainer.userDefaults)
+  private var autoOpenLastPage: Bool = true
+
   @State private var lastUsedItem: UniqueBox<BookPage>?
   @State private var query: String = ""
   @State private var result: [Book.Node] = []
   @State private var currentTask: Task<Void, Error>?
-  
+  @State private var showSettings: Bool = false
+
   @State var path: NavigationPath = .init()
   
   // MARK: Initializers
@@ -128,23 +134,36 @@ struct BookContainer: View {
       }
       .navigationTitle(store.title)
       .searchable(text: $query, prompt: "Search")
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button {
+            showSettings = true
+          } label: {
+            Image(systemName: "gearshape.fill")
+          }
+        }
+      }
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
         page
           .value
           .destination()
           .environment(\.bookContext, store)
       }
+      .sheet(isPresented: $showSettings) {
+        SettingsView()
+      }
     }
-    
-    .tabItem {
-      Image(systemName: "list.bullet")
-      Text("List")
-    }
-    .environment(\.bookContext, store)    
+    .environment(\.bookContext, store)
     .onAppear {
+      print("📱 BookContainer.onAppear: autoOpenLastPage = \(autoOpenLastPage)")
+      guard autoOpenLastPage else {
+        print("📱 Auto-open disabled, skipping")
+        return
+      }
       // Use Task to hop as somehow iOS26 gets hangs when back to top by using back button.
       Task {
         if let value = store.historyPages.first {
+          print("📱 Auto-opening last page: \(value.title)")
           path.append(UniqueBox(value: value))
         }
       }
