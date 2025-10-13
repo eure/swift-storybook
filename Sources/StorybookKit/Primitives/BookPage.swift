@@ -48,7 +48,7 @@ private func issueUniqueNumber() -> Int {
 }
 
 /// A component that displays a disclosure view.
-public struct BookPage: BookView, Identifiable {
+public struct BookPage: BookView, Identifiable, Sendable {
 
   @Environment(\.bookContext) var context
 
