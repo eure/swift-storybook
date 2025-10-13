@@ -85,14 +85,15 @@ public struct Book: BookView, Identifiable {
         NodeOutlineGroup(expandsAll: isExpandedAll, node, children: \.children) { content in
           switch content {
           case .folder(let folder):
-            
+
             HStack {
               Image.init(systemName: "folder.fill")
+                .foregroundStyle(.blue)
               Text(folder.title)
             }
-            
+
           case .page(let page):
-            page             
+            page
           }
         }
         

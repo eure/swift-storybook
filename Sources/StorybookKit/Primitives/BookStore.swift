@@ -8,6 +8,7 @@ public final class BookStore: ObservableObject {
   public let book: Book
 
   private let allPages: [BookPage.ID: BookPage]
+  private let folderPages: [String: (book: Book, pageIDs: Set<BookPage.ID>)]
 
   private let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
 
@@ -24,6 +25,24 @@ public final class BookStore: ObservableObject {
         partialResult[item.id] = item
       }
     )
+
+    // Build folder-to-pages mapping for search
+    var folderPagesMap: [String: (book: Book, pageIDs: Set<BookPage.ID>)] = [:]
+    func traverseNodes(_ nodes: [Book.Node], folderTitle: String? = nil) {
+      for node in nodes {
+        switch node {
+        case .folder(let folder):
+          let pages = folder.allPages()
+          let pageIDs = Set(pages.map { $0.id })
+          folderPagesMap[folder.title] = (book: folder, pageIDs: pageIDs)
+          traverseNodes(folder.contents, folderTitle: folder.title)
+        case .page:
+          break
+        }
+      }
+    }
+    traverseNodes(book.contents)
+    self.folderPages = folderPagesMap
 
     updateHistory()
   }
@@ -67,19 +86,48 @@ public final class BookStore: ObservableObject {
     updateHistory()
   }
 
-  nonisolated func search(query: String) async -> [BookPage] {
+  nonisolated func search(query: String) async -> [Book.Node] {
 
-    // find pages using query but fuzzy
-    let pages = allPages.values
-      .map { page -> (score: Double, page: BookPage) in
-        let score = page.title.score(word: query)
-        return (score, page)
+    // Search through folders and pages
+    var results: [(score: Double, node: Book.Node)] = []
+
+    // Search folder titles - add folders themselves to results
+    for (folderTitle, folderData) in folderPages {
+      let folderScore = folderTitle.score(word: query)
+      if folderScore > 0 {
+        // Add the folder itself as a result
+        results.append((score: folderScore, node: .folder(folderData.book)))
       }
-      .filter { $0.score > 0 }
-      .sorted { $0.score > $1.score }
-      .map { $0.page }
+    }
 
-    return pages
+    // Search page titles
+    for page in allPages.values {
+      let pageScore = page.title.score(word: query)
+      if pageScore > 0 {
+        results.append((score: pageScore, node: .page(page)))
+      }
+    }
+
+    // Remove duplicates (keep highest score for each node)
+    var uniqueResults: [String: (score: Double, node: Book.Node)] = [:]
+    for result in results {
+      let nodeID = result.node.id
+      if let existing = uniqueResults[nodeID] {
+        // Keep the higher score
+        if result.score > existing.score {
+          uniqueResults[nodeID] = result
+        }
+      } else {
+        uniqueResults[nodeID] = result
+      }
+    }
+
+    // Sort by score and return nodes
+    let sortedNodes = uniqueResults.values
+      .sorted { $0.score > $1.score }
+      .map { $0.node }
+
+    return sortedNodes
   }
 
 }
