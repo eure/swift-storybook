@@ -65,9 +65,9 @@ struct BookContainer: View {
   
   @ObservedObject private var store: BookStore
   
-  @State private var lastUsedItem: UniqueBox<BookPage>?      
+  @State private var lastUsedItem: UniqueBox<BookPage>?
   @State private var query: String = ""
-  @State private var result: [BookPage] = []
+  @State private var result: [Book.Node] = []
   @State private var currentTask: Task<Void, Error>?
   
   @State var path: NavigationPath = .init()
@@ -90,8 +90,25 @@ struct BookContainer: View {
         
         if result.isEmpty == false {
           Section {
-            ForEach(result) { link in
-              link
+            ForEach(result) { node in
+              Group {
+                switch node {
+                case .folder(let folder):
+                  DisclosureGroup {
+                    ForEach(folder.contents) { childNode in
+                      SearchResultNodeView(node: childNode)
+                    }
+                  } label: {
+                    HStack {
+                      Image(systemName: "folder.fill")
+                        .foregroundStyle(.blue)
+                      Text(folder.title)
+                    }
+                  }
+                case .page(let page):
+                  page
+                }
+              }
             }
           } header: {
             Text("Search Result")
@@ -144,9 +161,7 @@ struct BookContainer: View {
       currentTask = Task {
         
         let result = await store.search(query: value)
-        
-        print(result.map { $0.title })
-        
+                
         guard Task.isCancelled == false else {
           return
         }
@@ -157,6 +172,29 @@ struct BookContainer: View {
     })    
   }
 
+}
+
+private struct SearchResultNodeView: View {
+  let node: Book.Node
+
+  var body: some View {
+    switch node {
+    case .folder(let folder):
+      DisclosureGroup {
+        ForEach(folder.contents) { childNode in
+          SearchResultNodeView(node: childNode)
+        }
+      } label: {
+        HStack {
+          Image(systemName: "folder.fill")
+            .foregroundStyle(.blue)
+          Text(folder.title)
+        }
+      }
+    case .page(let page):
+      page
+    }
+  }
 }
 
 final class _ViewController<Content: View>: UIViewController {

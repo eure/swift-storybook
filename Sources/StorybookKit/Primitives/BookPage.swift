@@ -138,7 +138,8 @@ private struct LinkLabel: View {
 
   var body: some View {
     HStack {
-      Image.init(systemName: "doc")
+      Image.init(systemName: "doc.fill")
+        .foregroundStyle(.orange)
       VStack(alignment: .leading) {
         Text(title)
         Text("\(fileID):\(line)")
