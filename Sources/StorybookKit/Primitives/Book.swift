@@ -1,8 +1,8 @@
 import SwiftUI
 
-public struct Book: BookView, Identifiable {
+public struct Book: BookView, Identifiable, Sendable {
 
-  public enum Node: Identifiable {
+  public enum Node: Identifiable, Sendable {
 
     public var id: String {
       switch self {
