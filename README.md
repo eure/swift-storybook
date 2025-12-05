@@ -58,6 +58,11 @@ In a static library module
 
 <img width="150px" src="https://github.com/user-attachments/assets/f849a5a1-c0df-4551-a9a8-c5a0367fe459" alt="list of modules">
 
+## Maintainers
+
+- [Hiroshi Kimura (Muukii)](https://github.com/muukii)
+- [John Estropia](https://github.com/johnestropia)
+
 ## License
 
 Storybook-ios is released under the MIT license.
