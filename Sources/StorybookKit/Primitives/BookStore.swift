@@ -1,35 +1,60 @@
 
-@MainActor
-public final class BookStore: ObservableObject {
+import Foundation
+import Observation
 
-  @Published var historyPages: [BookPage] = []
+@Observable
+@MainActor
+public final class BookStore {
+
+  var historyPages: [BookPage] = []
+  var pinnedNodes: [Book.Node] = []
 
   public let title: String
   public let book: Book
+  public let deepLinkScheme: String?
 
   private let allPages: [BookPage.ID: BookPage]
+  private let allPagesByStableID: [String: BookPage]
   private let folderPages: [String: (book: Book, pageIDs: Set<BookPage.ID>)]
+  private var allNodes: [String: Book.Node] = [:]
 
   private let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
+  private enum DefaultsKey {
+    static let historyPageIDs = "historyPageIDs"
+    static let legacyHistoryIndexes = "history"
+    static let pinnedNodes = "pinnedNodes"
+  }
 
   public init(
-    book: Book
+    book: Book,
+    deepLinkScheme: String? = StorybookDeepLink.defaultScheme
   ) {
 
     self.title = book.title
     self.book = book
+    self.deepLinkScheme = deepLinkScheme
 
-    self.allPages = book.allPages().reduce(
+    let pages = book.allPages()
+
+    self.allPages = pages.reduce(
       into: [BookPage.ID: BookPage](),
       { partialResult, item in
         partialResult[item.id] = item
       }
     )
+    self.allPagesByStableID = pages.reduce(
+      into: [String: BookPage](),
+      { partialResult, item in
+        partialResult[item.id.stableID] = item
+      }
+    )
 
-    // Build folder-to-pages mapping for search
+    // Build folder-to-pages mapping for search and allNodes for pin management
     var folderPagesMap: [String: (book: Book, pageIDs: Set<BookPage.ID>)] = [:]
+    var allNodesMap: [String: Book.Node] = [:]
     func traverseNodes(_ nodes: [Book.Node], folderTitle: String? = nil) {
       for node in nodes {
+        allNodesMap[node.id] = node
         switch node {
         case .folder(let folder):
           let pages = folder.allPages()
@@ -43,13 +68,21 @@ public final class BookStore: ObservableObject {
     }
     traverseNodes(book.contents)
     self.folderPages = folderPagesMap
+    self.allNodes = allNodesMap
 
     updateHistory()
+    loadPinnedNodes()
   }
 
   private func updateHistory() {
 
-    let indexes = userDefaults.array(forKey: "history") as? [Int] ?? []
+    let pageIDs = userDefaults.stringArray(forKey: DefaultsKey.historyPageIDs) ?? []
+    if pageIDs.isEmpty == false {
+      historyPages = pageIDs.compactMap { allPagesByStableID[$0] }
+      return
+    }
+
+    let indexes = userDefaults.array(forKey: DefaultsKey.legacyHistoryIndexes) as? [Int] ?? []
 
     let _pages = indexes.compactMap { (index: Int) -> BookPage? in
       let id = DeclarationIdentifier(raw: index)
@@ -69,24 +102,51 @@ public final class BookStore: ObservableObject {
       return
     }
 
-    let index = pageID.index
+    let stableID = pageID.stableID
 
-    var current = userDefaults.array(forKey: "history") as? [Int] ?? []
-    if let index = current.firstIndex(of: index) {
+    var current = userDefaults.stringArray(forKey: DefaultsKey.historyPageIDs) ?? []
+    if let index = current.firstIndex(of: stableID) {
       current.remove(at: index)
     }
 
-    current.insert(index, at: 0)
+    current.insert(stableID, at: 0)
     current = Array(current.prefix(5))
 
-    userDefaults.set(current, forKey: "history")
+    userDefaults.set(current, forKey: DefaultsKey.historyPageIDs)
 
     print("Update history", current)
 
     updateHistory()
   }
 
-  nonisolated func search(query: String) async -> [Book.Node] {
+  public func deepLinkURL(for pageID: DeclarationIdentifier) -> URL? {
+    guard let deepLinkScheme else {
+      return nil
+    }
+    return StorybookDeepLink.makeURL(
+      scheme: deepLinkScheme,
+      pageID: pageID
+    )
+  }
+
+  func deepLinkURL(for page: BookPage) -> URL? {
+    deepLinkURL(for: page.id)
+  }
+
+  public func page(forDeepLink url: URL) -> BookPage? {
+    guard
+      let deepLinkScheme,
+      let pageID = StorybookDeepLink.pageID(
+        from: url,
+        matchingScheme: deepLinkScheme
+      )
+    else {
+      return nil
+    }
+    return allPagesByStableID[pageID]
+  }
+
+  func search(query: String) async -> [Book.Node] {
 
     // Search through folders and pages
     var results: [(score: Double, node: Book.Node)] = []
@@ -130,5 +190,41 @@ public final class BookStore: ObservableObject {
     return sortedNodes
   }
 
-}
+  // MARK: - Pin Management
 
+  func togglePin(node: Book.Node) {
+    if let index = pinnedNodes.firstIndex(where: { $0.id == node.id }) {
+      pinnedNodes.remove(at: index)
+    } else {
+      pinnedNodes.insert(node, at: 0)
+    }
+    savePinnedNodes()
+  }
+
+  func isPinned(node: Book.Node) -> Bool {
+    pinnedNodes.contains(where: { $0.id == node.id })
+  }
+
+  private func loadPinnedNodes() {
+    guard let items = userDefaults.array(forKey: DefaultsKey.pinnedNodes) as? [[String: String]] else {
+      return
+    }
+
+    let nodes = items.compactMap { item -> Book.Node? in
+      guard let nodeIDString = item["id"] else {
+        return nil
+      }
+      return allNodes[nodeIDString]
+    }
+
+    pinnedNodes = nodes
+  }
+
+  private func savePinnedNodes() {
+    let items = pinnedNodes.map { node -> [String: String] in
+      return ["id": node.id]
+    }
+    userDefaults.set(items, forKey: DefaultsKey.pinnedNodes)
+  }
+
+}

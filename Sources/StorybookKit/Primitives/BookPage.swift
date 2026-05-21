@@ -22,17 +22,82 @@
 import Foundation
 import SwiftUI
 import ResultBuilderKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public struct DeclarationIdentifier: Hashable, Codable, Sendable {
 
-  public let index: Int
+  enum Storage: Hashable, Codable {
+    case index(Int)
+    case location(fileID: String, line: Int)
+  }
+
+  let storage: Storage
 
   nonisolated init() {
-    index = issueUniqueNumber()
+    self.storage = .index(issueUniqueNumber())
+  }
+
+  public init(fileID: String, line: Int) {
+    self.storage = .location(fileID: fileID, line: line)
   }
 
   public init(raw index: Int) {
-    self.index = index
+    self.storage = .index(index)
+  }
+
+  public init?(stableID: String) {
+    if stableID.hasPrefix("index:") {
+      let value = stableID.dropFirst("index:".count)
+      guard let index = Int(value) else {
+        return nil
+      }
+      self.storage = .index(index)
+      return
+    }
+
+    guard
+      let separator = stableID.lastIndex(of: ":"),
+      separator > stableID.startIndex,
+      let line = Int(stableID[stableID.index(after: separator)...])
+    else {
+      return nil
+    }
+
+    self.storage = .location(
+      fileID: String(stableID[..<separator]),
+      line: line
+    )
+  }
+
+  // For backward compatibility with History feature
+  var index: Int {
+    switch storage {
+    case .index(let i):
+      return i
+    case .location(let fileID, let line):
+      return Self.stableHash("\(fileID):\(line)")
+    }
+  }
+
+  // Stable string representation for identification
+  public var stableID: String {
+    switch storage {
+    case .index(let i):
+      return "index:\(i)"
+    case .location(let fileID, let line):
+      return "\(fileID):\(line)"
+    }
+  }
+
+  private static func stableHash(_ value: String) -> Int {
+    var hash: UInt64 = 14_695_981_039_346_656_037
+    for byte in value.utf8 {
+      hash ^= UInt64(byte)
+      hash &*= 1_099_511_628_211
+    }
+    return Int(hash % UInt64(Int.max))
   }
 }
 
@@ -75,36 +140,52 @@ public struct BookPage: BookView, Identifiable, Sendable {
     self.title = title
     self.usesScrollView = usesScrollView
     self.destination = { AnyView(destination()) }
-    self.declarationIdentifier = .init()
+    self.declarationIdentifier = .init(fileID: String(fileID), line: Int(line))
   }
 
   public var body: some View {
 
     NavigationLink {
-      Group {
-        if usesScrollView {
-          ScrollView {
-            Display(content: destination)
-          }
-        } else {
-          Display(content: destination)
-        }
-      }
-      .listStyle(.plain)
-      .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.inline)
-      .onAppear(perform: {
-        context?.onOpen(pageID: id)
-      })
+      BookPageDestination(page: self)
     } label: {
-      LinkLabel(title: title, fileID: fileID, line: line)
+      LinkLabel(page: self, title: title, fileID: fileID, line: line)
 //        .contextMenu(menuItems: {
 //          Text(title)
-//        }) { 
+//        }) {
 //          destination
 //        }
     }
    
+  }
+}
+
+struct BookPageDestination: View {
+
+  @Environment(\.bookContext) private var context
+
+  let page: BookPage
+
+  var body: some View {
+    Group {
+      if page.usesScrollView {
+        ScrollView {
+          Display(content: page.destination)
+        }
+      } else {
+        Display(content: page.destination)
+      }
+    }
+    .listStyle(.plain)
+    .navigationTitle(page.title)
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        DeepLinkCopyButton(pageID: page.id)
+      }
+    }
+    .onAppear(perform: {
+      context?.onOpen(pageID: page.id)
+    })
   }
 }
 
@@ -131,7 +212,10 @@ private struct Display: View {
 }
 
 private struct LinkLabel: View {
-  
+
+  @Environment(\.bookContext) var bookContext
+
+  let page: BookPage
   let title: any StringProtocol
   let fileID: any StringProtocol
   let line: any FixedWidthInteger
@@ -146,6 +230,50 @@ private struct LinkLabel: View {
           .font(.caption.monospacedDigit())
           .opacity(0.8)
       }
+      Spacer()
+      if let store = bookContext {
+        Button {
+          store.togglePin(node: .page(page))
+        } label: {
+          Image(systemName: store.isPinned(node: .page(page)) ? "pin.fill" : "pin")
+            .foregroundStyle(.orange)
+        }
+        .buttonStyle(.plain)
+      }
     }
+    .contextMenu {
+      DeepLinkCopyButton(pageID: page.id, title: "Copy Deep Link")
+    }
+  }
+}
+
+private struct DeepLinkCopyButton: View {
+
+  @Environment(\.bookContext) private var bookContext
+
+  let pageID: DeclarationIdentifier
+  var title: String?
+
+  var body: some View {
+    if let url = bookContext?.deepLinkURL(for: pageID) {
+      Button {
+        StorybookClipboard.copy(url)
+      } label: {
+        if let title {
+          Label(title, systemImage: "link")
+        } else {
+          Image(systemName: "link")
+        }
+      }
+    }
+  }
+}
+
+private enum StorybookClipboard {
+
+  static func copy(_ url: URL) {
+    #if canImport(UIKit)
+    UIPasteboard.general.url = url
+    #endif
   }
 }

@@ -65,7 +65,7 @@ struct BookContainer: View {
 
   // MARK: Properties
 
-  @ObservedObject private var store: BookStore
+  private var store: BookStore
 
   @AppStorage("autoOpenLastPage", store: BookContainer.userDefaults)
   private var autoOpenLastPage: Bool = true
@@ -120,7 +120,34 @@ struct BookContainer: View {
             Text("Search Result")
           }
         }
-      
+
+        if store.pinnedNodes.isEmpty == false {
+          Section {
+            ForEach(store.pinnedNodes) { node in
+              Group {
+                switch node {
+                case .folder(let folder):
+                  DisclosureGroup {
+                    ForEach(folder.contents) { childNode in
+                      SearchResultNodeView(node: childNode)
+                    }
+                  } label: {
+                    HStack {
+                      Image(systemName: "folder.fill")
+                        .foregroundStyle(.blue)
+                      Text(folder.title)
+                    }
+                  }
+                case .page(let page):
+                  page
+                }
+              }
+            }
+          } header: {
+            Text("Pinned")
+          }
+        }
+
         Section {
           ForEach(store.historyPages) { link in
             link
@@ -144,9 +171,7 @@ struct BookContainer: View {
         }
       }
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
-        page
-          .value
-          .destination()
+        BookPageDestination(page: page.value)
           .environment(\.bookContext, store)
       }
       .sheet(isPresented: $showSettings) {
@@ -162,11 +187,17 @@ struct BookContainer: View {
       }
       // Use Task to hop as somehow iOS26 gets hangs when back to top by using back button.
       Task {
+        guard path.isEmpty else {
+          return
+        }
         if let value = store.historyPages.first {
           print("📱 Auto-opening last page: \(value.title)")
-          path.append(UniqueBox(value: value))
+          open(page: value)
         }
       }
+    }
+    .onOpenURL { url in
+      openDeepLink(url)
     }
     .onChange(of: query, perform: { value in
       
@@ -189,6 +220,21 @@ struct BookContainer: View {
       }
       
     })    
+  }
+
+  private func openDeepLink(_ url: URL) {
+    guard let page = store.page(forDeepLink: url) else {
+      return
+    }
+    open(page: page)
+  }
+
+  private func open(page: BookPage) {
+    currentTask?.cancel()
+    query = ""
+    result = []
+    path = .init()
+    path.append(UniqueBox(value: page))
   }
 
 }

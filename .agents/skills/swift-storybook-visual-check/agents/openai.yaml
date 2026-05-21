@@ -1,0 +1,3 @@
+display_name: Swift Storybook Visual Check
+short_description: Open swift-storybook deep links in a simulator and verify UI screenshots.
+default_prompt: Validate this iOS UI change through swift-storybook by opening the relevant Storybook page in the simulator and capturing a screenshot.

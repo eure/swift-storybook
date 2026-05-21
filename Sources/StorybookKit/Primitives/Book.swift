@@ -6,8 +6,8 @@ public struct Book: BookView, Identifiable, Sendable {
 
     public var id: String {
       switch self {
-      case .folder(let v): return "folder.\(v.id)"
-      case .page(let v): return "page.\(v.id)"
+      case .folder(let v): return "folder.\(v.id.stableID)"
+      case .page(let v): return "page.\(v.id.stableID)"
       }
     }
 
@@ -31,18 +31,29 @@ public struct Book: BookView, Identifiable, Sendable {
 
   }
 
-  public var id: UUID = .init()
+  public nonisolated let declarationIdentifier: DeclarationIdentifier
+  private let fileID: any StringProtocol
+  private let line: any FixedWidthInteger
+
+  public nonisolated var id: DeclarationIdentifier {
+    declarationIdentifier
+  }
 
   public let title: String
   public let contents: [Node]
-  
+
   @State private var isExpandedAll: Bool = false
 
   public init(
+    _ fileID: any StringProtocol = #fileID,
+    _ line: any FixedWidthInteger = #line,
     title: String,
     @FolderBuilder contents: () -> [Node]
   ) {
 
+    self.fileID = fileID
+    self.line = line
+    self.declarationIdentifier = .init(fileID: String(fileID), line: Int(line))
     self.title = title
 
     let _contents = contents()
@@ -79,8 +90,10 @@ public struct Book: BookView, Identifiable, Sendable {
 
   }
 
+  @Environment(\.bookContext) var bookContext
+
   public var body: some View {
-    Section { 
+    Section {
       ForEach(contents) { node in
         NodeOutlineGroup(expandsAll: isExpandedAll, node, children: \.children) { content in
           switch content {
@@ -90,13 +103,23 @@ public struct Book: BookView, Identifiable, Sendable {
               Image.init(systemName: "folder.fill")
                 .foregroundStyle(.blue)
               Text(folder.title)
+              Spacer()
+              if let store = bookContext {
+                Button {
+                  store.togglePin(node: .folder(folder))
+                } label: {
+                  Image(systemName: store.isPinned(node: .folder(folder)) ? "pin.fill" : "pin")
+                    .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+              }
             }
 
           case .page(let page):
             page
           }
         }
-        
+
       }
     } header: {
       HStack {
@@ -108,7 +131,7 @@ public struct Book: BookView, Identifiable, Sendable {
         .font(.caption)
       }
     }
-   
+
   }
 
   func allPages() -> [BookPage] {
@@ -152,6 +175,8 @@ extension Book {
     return fileIDsByModule.keys.sorted().map { module in
       return Node.folder(
         .init(
+          module, // Use module name as fileID
+          0,      // Use 0 as line for module-level folders
           title: module,
           contents: { [fileIDs = fileIDsByModule[module]!.sorted()] in
             fileIDs.map { fileID in
@@ -161,6 +186,8 @@ extension Book {
 
               return Node.folder(
                 .init(
+                  fileID,           // Use actual fileID
+                  registries[0].line, // Use first registry's line
                   title: name,
                   contents: {
                     registries.map { registry in
