@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.3
 import CompilerPluginSupport
 import PackageDescription
 
@@ -7,7 +7,7 @@ let package = Package(
   platforms: [
     .iOS(.v16),
     .macCatalyst(.v15),
-    .macOS(.v10_15),
+    .macOS(.v12),
   ],
   products: [
     .library(name: "StorybookKit", targets: ["StorybookKit"]),
