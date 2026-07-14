@@ -21,7 +21,6 @@
 
 import Foundation
 import SwiftUI
-import ResultBuilderKit
 
 public struct DeclarationIdentifier: Hashable, Codable, Sendable {
 

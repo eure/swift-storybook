@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.3
 import CompilerPluginSupport
 import PackageDescription
 
@@ -11,46 +11,13 @@ let package = Package(
   ],
   products: [
     .library(name: "StorybookKit", targets: ["StorybookKit"]),
-    .library(name: "StorybookKitTextureSupport", targets: ["StorybookKitTextureSupport"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/FluidGroup/TextureBridging.git", from: "3.2.1"),
-    .package(url: "https://github.com/FluidGroup/TextureSwiftSupport.git", from: "3.20.1"),
-    .package(url: "https://github.com/FluidGroup/swiftui-support", from: "0.4.1"),
-    .package(url: "https://github.com/FluidGroup/ResultBuilderKit", from: "1.3.0"),
-    .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"603.0.0"),
-    .package(url: "https://github.com/pointfreeco/swift-macro-testing.git", from: "0.5.2"),
   ],
   targets: [
     .target(
       name: "StorybookKit",
       dependencies: [
-        "StorybookMacrosPlugin",
-        .product(name: "SwiftUISupport", package: "swiftui-support"),
-        "ResultBuilderKit",
-      ]
-    ),
-    .macro(
-      name: "StorybookMacrosPlugin",
-      dependencies: [
-        .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-        .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-      ]
-    ),
-    .testTarget(
-      name: "StorybookMacrosTests",
-      dependencies: [
-        "StorybookMacrosPlugin",
-        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-        .product(name: "MacroTesting", package: "swift-macro-testing"),
-      ]
-    ),
-    .target(
-      name: "StorybookKitTextureSupport",
-      dependencies: [
-        .product(name: "TextureSwiftSupport", package: "TextureSwiftSupport"),
-        .product(name: "TextureBridging", package: "TextureBridging"),
-        "StorybookKit",
       ]
     ),
   ],
