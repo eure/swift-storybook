@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftUISupport
 import UIKit
 
 public struct StorybookDisplayRootView: View {

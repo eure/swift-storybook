@@ -21,6 +21,7 @@
 
 import Foundation
 import MachO
+import DeveloperToolsSupport
 
 extension Book {
 
