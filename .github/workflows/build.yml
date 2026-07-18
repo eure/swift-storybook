@@ -11,4 +11,4 @@ jobs:
           xcode-version: "26.6"
       - uses: actions/checkout@v4
       - name: xcodebuild
-        run: set -o pipefail && xcodebuild -scheme swift-storybook -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' | xcbeautify
+        run: set -o pipefail && xcodebuild -scheme Storybook -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' | xcbeautify
