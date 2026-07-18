@@ -20,6 +20,12 @@ let package = Package(
       dependencies: [
       ]
     ),
+    .testTarget(
+      name: "StorybookKitTests",
+      dependencies: [
+        "StorybookKit",
+      ]
+    ),
   ],
   swiftLanguageModes: [.v6, .v5]
 )

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Swift Storybook Visual Check"
+  short_description: "Launch and capture an exact Storybook page"
+  default_prompt: "Use $swift-storybook-visual-check to launch an exact Storybook page on a simulator, verify it, and capture a screenshot."

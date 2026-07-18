@@ -19,13 +19,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import Foundation
+import StorybookKit
 import SwiftUI
 
 @main
 struct SwiftUIDemoAppApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+
+  private let storybookLaunchRequest = StorybookLaunchRequest(
+    arguments: ProcessInfo.processInfo.arguments
+  )
+
+  var body: some Scene {
+    WindowGroup {
+      if let storybookLaunchRequest {
+        Storybook(launchRequest: storybookLaunchRequest)
+      } else {
+        ContentView()
+      }
     }
+  }
 }

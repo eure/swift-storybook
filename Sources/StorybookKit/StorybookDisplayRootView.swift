@@ -3,11 +3,59 @@ import UIKit
 
 public struct StorybookDisplayRootView: View {
 
-  let book: BookContainer
+  private let book: BookContainer
 
+  /// Creates a Storybook that opens its catalog, subject to the user's
+  /// auto-open-last-page setting.
   @MainActor
   public init(bookStore: BookStore) {
-    self.book = .init(store: bookStore)
+    self.book = .init(
+      store: bookStore,
+      initialPresentation: .automaticCatalog
+    )
+  }
+
+  /// Creates a Storybook that immediately opens an exactly matched page.
+  ///
+  /// An unresolved or ambiguous selector produces a diagnostic screen inside
+  /// Storybook instead of silently opening a different page.
+  @MainActor
+  public init(
+    bookStore: BookStore,
+    initialPage: BookPageSelector
+  ) {
+    self.book = .init(
+      store: bookStore,
+      initialPresentation: Self.resolve(
+        initialPage,
+        in: bookStore
+      )
+    )
+  }
+
+  /// Creates a Storybook for a parsed programmable launch request.
+  ///
+  /// Use `StorybookLaunchRequest.init(arguments:)` at the host application's
+  /// startup boundary, before constructing its normal root view.
+  @MainActor
+  public init(
+    bookStore: BookStore,
+    launchRequest: StorybookLaunchRequest
+  ) {
+    let initialPresentation: BookInitialPresentation
+    switch launchRequest {
+    case .catalog:
+      initialPresentation = .catalog
+    case .page(let selector):
+      initialPresentation = Self.resolve(selector, in: bookStore)
+    case .invalid(let diagnostic):
+      initialPresentation = .failure(.invalid(diagnostic))
+    }
+
+    self.book = .init(
+      store: bookStore,
+      initialPresentation: initialPresentation
+    )
   }
 
   public var body: some View {
@@ -18,6 +66,20 @@ public struct StorybookDisplayRootView: View {
     }
     .ignoresSafeArea()
 
+  }
+
+  @MainActor
+  private static func resolve(
+    _ selector: BookPageSelector,
+    in store: BookStore
+  ) -> BookInitialPresentation {
+    do {
+      return .page(try store.resolve(selector))
+    } catch let error as BookPageResolutionError {
+      return .failure(.resolution(error))
+    } catch {
+      return .failure(.unexpected(error.localizedDescription))
+    }
   }
 }
 
@@ -40,7 +102,120 @@ public struct BookActionHosting<Content: View>: View {
   }
 }
 
-struct BookContainer: View {
+/// The navigation state Storybook should establish on its first presentation.
+private enum BookInitialPresentation {
+  case automaticCatalog
+  case catalog
+  case page(BookPage)
+  case failure(StorybookLaunchFailure)
+}
+
+/// A launch failure that can be rendered without choosing an unintended page.
+private enum StorybookLaunchFailure {
+  case invalid(StorybookLaunchDiagnostic)
+  case resolution(BookPageResolutionError)
+  case unexpected(String)
+
+  var reason: String {
+    switch self {
+    case .invalid(let diagnostic):
+      return diagnostic.message
+    case .resolution(let error):
+      switch error {
+      case .notFound:
+        return "No Storybook page exactly matched the request."
+      case .ambiguous(let selector, _):
+        if selector.line != nil {
+          return
+            "Multiple pages share this exact name and source location. Give each page a unique name."
+        }
+        if selector.fileID != nil {
+          return "More than one Storybook page matched the request. Add a candidate line number."
+        }
+        return
+          "More than one Storybook page matched the request. Add a candidate file ID and, when needed, its line number."
+      }
+    case .unexpected(let message):
+      return message
+    }
+  }
+
+  var launchArguments: [String]? {
+    let selector: BookPageSelector
+    switch self {
+    case .invalid, .unexpected:
+      return nil
+    case .resolution(let error):
+      switch error {
+      case .notFound(let value, _), .ambiguous(let value, _):
+        selector = value
+      }
+    }
+
+    return selector.launchArguments
+  }
+
+  var candidates: [BookPageDescriptor] {
+    switch self {
+    case .invalid, .unexpected:
+      return []
+    case .resolution(let error):
+      let candidates: [BookPageDescriptor]
+      switch error {
+      case .notFound(_, let values), .ambiguous(_, let values):
+        candidates = values
+      }
+
+      var seen: Set<BookPageDescriptor> = []
+      return candidates.filter { candidate in
+        seen.insert(candidate).inserted
+      }
+    }
+  }
+}
+
+/// Selects the catalog or diagnostic surface for the requested launch mode.
+private struct BookContainer: View {
+
+  private let store: BookStore
+  private let initialPresentation: BookInitialPresentation
+
+  init(
+    store: BookStore,
+    initialPresentation: BookInitialPresentation
+  ) {
+    self.store = store
+    self.initialPresentation = initialPresentation
+  }
+
+  var body: some View {
+    switch initialPresentation {
+    case .automaticCatalog:
+      BookCatalogView(
+        store: store,
+        initialPage: nil,
+        shouldAutoOpenLastPage: true
+      )
+    case .catalog:
+      BookCatalogView(
+        store: store,
+        initialPage: nil,
+        shouldAutoOpenLastPage: false
+      )
+    case .page(let page):
+      BookCatalogView(
+        store: store,
+        initialPage: page,
+        shouldAutoOpenLastPage: false
+      )
+    case .failure(let failure):
+      StorybookLaunchFailureView(failure: failure)
+    }
+  }
+}
+
+/// Owns catalog navigation, search, settings, and page history presentation.
+private struct BookCatalogView: View {
 
   private static let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
 
@@ -62,37 +237,38 @@ struct BookContainer: View {
     }
   }
 
-  // MARK: Properties
-
   @ObservedObject private var store: BookStore
 
-  @AppStorage("autoOpenLastPage", store: BookContainer.userDefaults)
+  @AppStorage("autoOpenLastPage", store: BookCatalogView.userDefaults)
   private var autoOpenLastPage: Bool = true
 
-  @State private var lastUsedItem: UniqueBox<BookPage>?
+  private let shouldAutoOpenLastPage: Bool
+
   @State private var query: String = ""
   @State private var result: [Book.Node] = []
   @State private var currentTask: Task<Void, Error>?
   @State private var showSettings: Bool = false
+  @State private var path: NavigationPath
 
-  @State var path: NavigationPath = .init()
-  
-  // MARK: Initializers
-  
   @MainActor
-  public init(
-    store: BookStore
+  init(
+    store: BookStore,
+    initialPage: BookPage?,
+    shouldAutoOpenLastPage: Bool
   ) {
     self.store = store
+    self.shouldAutoOpenLastPage = shouldAutoOpenLastPage
+
+    var initialPath = NavigationPath()
+    if let initialPage {
+      initialPath.append(UniqueBox(value: initialPage))
+    }
+    self._path = .init(initialValue: initialPath)
   }
-  
-  // MARK: View
 
-  public var body: some View {
-
+  var body: some View {
     NavigationStack(path: $path) {
       List {
-        
         if result.isEmpty == false {
           Section {
             ForEach(result) { node in
@@ -119,7 +295,7 @@ struct BookContainer: View {
             Text("Search Result")
           }
         }
-      
+
         Section {
           ForEach(store.historyPages) { link in
             link
@@ -128,8 +304,7 @@ struct BookContainer: View {
           Text("History")
         }
 
-        store.book      
-
+        store.book
       }
       .navigationTitle(store.title)
       .searchable(text: $query, prompt: "Search")
@@ -143,9 +318,7 @@ struct BookContainer: View {
         }
       }
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
-        page
-          .value
-          .destination()
+        BookPageDestination(page: page.value)
           .environment(\.bookContext, store)
       }
       .sheet(isPresented: $showSettings) {
@@ -154,42 +327,84 @@ struct BookContainer: View {
     }
     .environment(\.bookContext, store)
     .onAppear {
-      print("📱 BookContainer.onAppear: autoOpenLastPage = \(autoOpenLastPage)")
-      guard autoOpenLastPage else {
-        print("📱 Auto-open disabled, skipping")
+      guard shouldAutoOpenLastPage, autoOpenLastPage else {
         return
       }
-      // Use Task to hop as somehow iOS26 gets hangs when back to top by using back button.
+
+      // Deferring avoids an iOS 26 navigation hang when returning to the root.
       Task {
-        if let value = store.historyPages.first {
-          print("📱 Auto-opening last page: \(value.title)")
-          path.append(UniqueBox(value: value))
+        guard path.isEmpty else {
+          return
+        }
+        if let page = store.historyPages.first {
+          path.append(UniqueBox(value: page))
         }
       }
     }
-    .onChange(of: query, perform: { value in
-      
-      guard value.isEmpty == false else {
-        currentTask?.cancel()
-        result = []
-        return
-      }
-      
-      currentTask?.cancel()
-      currentTask = Task {
-        
-        let result = await store.search(query: value)
-                
-        guard Task.isCancelled == false else {
+    .onChange(
+      of: query,
+      perform: { value in
+        guard value.isEmpty == false else {
+          currentTask?.cancel()
+          result = []
           return
         }
-        
-        self.result = result
-      }
-      
-    })    
-  }
 
+        currentTask?.cancel()
+        currentTask = Task {
+          let result = await store.search(query: value)
+
+          guard Task.isCancelled == false else {
+            return
+          }
+
+          self.result = result
+        }
+      })
+  }
+}
+
+/// Presents an actionable launch diagnostic and deterministic candidates.
+private struct StorybookLaunchFailureView: View {
+
+  let failure: StorybookLaunchFailure
+
+  var body: some View {
+    NavigationStack {
+      List {
+        Section("Reason") {
+          Text(failure.reason)
+        }
+        if let launchArguments = failure.launchArguments {
+          Section("Launch arguments") {
+            ForEach(
+              Array(launchArguments.enumerated()),
+              id: \.offset
+            ) { _, argument in
+              Text(argument)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+            }
+          }
+        }
+        if failure.candidates.isEmpty == false {
+          Section("Candidates") {
+            ForEach(failure.candidates, id: \.self) { candidate in
+              VStack(alignment: .leading) {
+                Text(candidate.name)
+                Text("\(candidate.fileID):\(candidate.line)")
+                  .font(.caption.monospacedDigit())
+                  .foregroundStyle(.secondary)
+                  .textSelection(.enabled)
+              }
+            }
+          }
+        }
+      }
+      .navigationTitle("Storybook launch failed")
+      .accessibilityIdentifier("storybook.launch.failure")
+    }
+  }
 }
 
 private struct SearchResultNodeView: View {

@@ -49,8 +49,6 @@ private func issueUniqueNumber() -> Int {
 /// A component that displays a disclosure view.
 public struct BookPage: BookView, Identifiable, Sendable {
 
-  @Environment(\.bookContext) var context
-
   public nonisolated var id: DeclarationIdentifier {
     declarationIdentifier
   }
@@ -58,9 +56,9 @@ public struct BookPage: BookView, Identifiable, Sendable {
   public let usesScrollView: Bool
   public let title: String
   public let destination: () -> AnyView
+  /// The name and source location used to select this page programmatically.
+  public let descriptor: BookPageDescriptor
   public nonisolated let declarationIdentifier: DeclarationIdentifier
-  private let fileID: any StringProtocol
-  private let line: any FixedWidthInteger  
 
   public init<Destination: View>(
     _ fileID: any StringProtocol = #fileID,
@@ -69,53 +67,73 @@ public struct BookPage: BookView, Identifiable, Sendable {
     usesScrollView: Bool = true,
     @ViewBuilder destination: @MainActor @escaping () -> Destination
   ) {
-    self.fileID = fileID
-    self.line = line
     self.title = title
     self.usesScrollView = usesScrollView
     self.destination = { AnyView(destination()) }
+    self.descriptor = .init(
+      name: title,
+      fileID: String(fileID),
+      line: String(describing: line)
+    )
     self.declarationIdentifier = .init()
   }
 
   public var body: some View {
 
     NavigationLink {
-      Group {
-        if usesScrollView {
-          ScrollView {
-            Display(content: destination)
-          }
-        } else {
-          Display(content: destination)
-        }
-      }
-      .listStyle(.plain)
-      .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.inline)
-      .onAppear(perform: {
-        context?.onOpen(pageID: id)
-      })
+      BookPageDestination(page: self)
     } label: {
-      LinkLabel(title: title, fileID: fileID, line: line)
-//        .contextMenu(menuItems: {
-//          Text(title)
-//        }) { 
-//          destination
-//        }
+      LinkLabel(
+        title: descriptor.name,
+        fileID: descriptor.fileID,
+        line: descriptor.line
+      )
+      //        .contextMenu(menuItems: {
+      //          Text(title)
+      //        }) {
+      //          destination
+      //        }
     }
-   
+
+  }
+}
+
+/// Renders one page consistently for catalog links and programmable navigation.
+struct BookPageDestination: View {
+
+  @Environment(\.bookContext) private var context
+
+  let page: BookPage
+
+  var body: some View {
+    Group {
+      if page.usesScrollView {
+        ScrollView {
+          Display(content: page.destination)
+        }
+      } else {
+        Display(content: page.destination)
+      }
+    }
+    .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
+    .listStyle(.plain)
+    .navigationTitle(page.title)
+    .navigationBarTitleDisplayMode(.inline)
+    .onAppear {
+      context?.onOpen(pageID: page.id)
+    }
   }
 }
 
 private struct Display: View {
-  
-  @State var loaded: AnyView?
+
+  @State private var loaded: AnyView?
   private let content: () -> AnyView
-  
+
   init(content: @escaping () -> AnyView) {
     self.content = content
   }
-  
+
   var body: some View {
     if let loaded {
       loaded
@@ -126,14 +144,14 @@ private struct Display: View {
         })
     }
   }
-  
+
 }
 
 private struct LinkLabel: View {
-  
-  let title: any StringProtocol
-  let fileID: any StringProtocol
-  let line: any FixedWidthInteger
+
+  let title: String
+  let fileID: String
+  let line: String
 
   var body: some View {
     HStack {
