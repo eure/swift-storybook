@@ -247,6 +247,7 @@
 			);
 			mainGroup = 957A89272226610200CDD25D;
 			packageReferences = (
+				019F707F8FD471938259F180 /* XCLocalSwiftPackageReference ".." */,
 				4BB655B82A87B0C200F2E2D7 /* XCRemoteSwiftPackageReference "swiftui-support" */,
 			);
 			productRefGroup = 957A89322226610200CDD25D /* Products */;
@@ -674,6 +675,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		019F707F8FD471938259F180 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		4BB655B82A87B0C200F2E2D7 /* XCRemoteSwiftPackageReference "swiftui-support" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -688,6 +696,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		4BA377F32D4CE31D00D4E565 /* StorybookKit */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 019F707F8FD471938259F180 /* XCLocalSwiftPackageReference ".." */;
 			productName = StorybookKit;
 		};
 /* End XCSwiftPackageProductDependency section */

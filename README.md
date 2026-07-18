@@ -22,6 +22,77 @@ struct ContentView: View {
 }
 ```
 
+## Programmable launch
+
+Storybook can parse a standard process argument and open its catalog or an exact page immediately. The host app must check the request before starting its normal UI; this package cannot intercept or replace an app's startup path by itself.
+
+```swift
+import Foundation
+import StorybookKit
+import SwiftUI
+
+@main
+struct ExampleApp: App {
+  private let storybookLaunchRequest: StorybookLaunchRequest? = .init(
+    arguments: ProcessInfo.processInfo.arguments
+  )
+
+  var body: some Scene {
+    WindowGroup {
+      if let storybookLaunchRequest {
+        Storybook(launchRequest: storybookLaunchRequest)
+      } else {
+        AppRootView()
+      }
+    }
+  }
+}
+```
+
+Use the same request with a custom book:
+
+```swift
+@MainActor
+func makeCustomStorybook(
+  launchRequest: StorybookLaunchRequest
+) -> some View {
+  let book = Book(title: "Design System") {
+    BookPage(title: "Primary button") {
+      Button("Continue") {}
+    }
+  }
+
+  return StorybookDisplayRootView(
+    bookStore: BookStore(book: book),
+    launchRequest: launchRequest
+  )
+}
+```
+
+The standard arguments are:
+
+```text
+--storybook
+--storybook <page-name>
+--storybook --storybook-name=<page-name>
+--storybook <page-name> --storybook-file <module/file.swift>
+--storybook <page-name> --storybook-file <module/file.swift> --storybook-line <line>
+```
+
+`--storybook` opens the catalog. Supply each token above as a distinct process argument; a page name containing spaces remains one argument. The positional form is convenient for ordinary names; use the single argument `--storybook-name=<page-name>` when the exact name is empty or begins with `-`. A name-only page request succeeds only when exactly one page has that name. Add the compiler-emitted `#fileID`, then the declaration line when necessary, to disambiguate duplicate names. Supplied page names and file identifiers are matched by their original UTF-8 bytes, without trimming, Unicode normalization, case folding, fuzzy search, or order-dependent fallback. Not-found and ambiguous requests remain visible in Storybook with candidate source locations and reusable launch-argument entries instead of opening another page. Pages that share the same name, file ID, and line must be given a unique declaration name or source location; Storybook does not choose between indistinguishable declarations.
+
+After a page opens, its root exposes a deterministic accessibility identifier in this form:
+
+```text
+storybook.page|<name-byte-count>:<name>|<fileID-byte-count>:<fileID>|<line>
+```
+
+The counts are UTF-8 byte counts. This lets automation prove that a qualified request opened the intended page before taking a screenshot.
+
+### Agent visual checks
+
+This repository includes the [`swift-storybook-visual-check`](.agents/skills/swift-storybook-visual-check/SKILL.md) skill. After the host adapter is connected, an Agent can use the same launch arguments to open the exact page, verify its hierarchy, and capture a simulator screenshot without navigating the catalog by hand.
+
 ## Example
 
 In app executable module
@@ -66,5 +137,3 @@ In a static library module
 ## License
 
 Storybook-ios is released under the MIT license.
-
-
