@@ -1,0 +1,4 @@
+interface:
+  display_name: "{{PROJECT_NAME}} Storybook Visual Check"
+  short_description: "Verify exact {{PROJECT_NAME}} Storybook pages on Simulator"
+  default_prompt: "Use ${{SKILL_NAME}} to open an exact Storybook page in {{PROJECT_NAME}}, verify it, and capture screenshot evidence."

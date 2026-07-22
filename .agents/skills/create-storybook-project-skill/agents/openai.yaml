@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Storybook Project Skill"
+  short_description: "Configure Storybook launch and a project visual-check skill"
+  default_prompt: "Use $create-storybook-project-skill to configure this iOS app for programmable Storybook launch and generate its project-specific visual-check skill."

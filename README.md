@@ -1,15 +1,44 @@
 # Storybook for iOS
 
-This library allows you to view UI components in a catalog-style format.  
-In most cases, it works by simply adding a few lines of code, as it gathers SwiftUI preview codes at runtime.
+Turn the `#Preview` declarations already in your app into an in-app component catalog.
 
-<img width="150px" src="https://github.com/user-attachments/assets/c6819a8a-3685-422b-a561-16ab513ccd54" alt="storybook previewing">
+Add `Storybook()` once, then keep writing previews as usual. Storybook discovers them at runtime and adds them to the catalog automatically—there is no separate registration step.
 
-## Setup
+## Motivation
 
-1. Install this package into your project.
+Xcode previews can become difficult to keep working reliably in very large projects, especially when the build is complex. When that happens, existing `#Preview` declarations often stop contributing to the development loop even though they still describe valuable component states.
 
-2. Put the entrypoint view.
+Storybook was created to preserve that investment. It discovers previews from a regular app build and presents them as a catalog, allowing teams to reuse their preview code and maintain a smooth UI development loop through the build and runtime path their project already relies on.
+
+Even when Xcode previews work well, running Storybook as part of an app provides additional benefits:
+
+- Open previews directly on a physical device.
+- Keep the catalog available in the installed app across launches, independently of an Xcode preview session.
+- Include a Storybook entry point in debug or internal builds and open it from within the app whenever it is needed.
+
+## From `#Preview` to Storybook
+
+```swift
+#Preview("Circle") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
+}
+```
+
+**The preview automatically appears in Storybook:**
+
+<img width="150px" src="https://github.com/user-attachments/assets/c6819a8a-3685-422b-a561-16ab513ccd54" alt="A SwiftUI preview automatically displayed in Storybook">
+
+The same declaration continues to work as an Xcode preview, so your preview code becomes the source of truth for both development and the in-app catalog.
+
+The included [`swift-storybook-visual-check`](.agents/skills/swift-storybook-visual-check/SKILL.md) skill also turns that catalog into a repeatable visual-check workflow for coding agents.
+
+## Quick start
+
+1. Add the package and link the `StorybookKit` product to your app.
+
+2. Put `Storybook` at the entry point of your catalog app or debug-only route.
 
 ```swift
 import StorybookKit
@@ -21,6 +50,42 @@ struct ContentView: View {
   }
 }
 ```
+
+3. Add `#Preview` declarations anywhere in the linked modules. No Storybook-specific registration is needed.
+
+```swift
+#Preview("Circle") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
+}
+```
+
+## Preview discovery
+
+Storybook automatically discovers previews in the app executable and linked dynamic frameworks.
+
+> [!IMPORTANT]
+> Previews in a static library may require the `-all_load` linker flag. Without it, the linker can remove preview symbols that appear unused, preventing Storybook from discovering them.
+
+<img width="150px" src="https://github.com/user-attachments/assets/f849a5a1-c0df-4551-a9a8-c5a0367fe459" alt="list of modules">
+
+## Agentic Coding
+
+Storybook provides a deterministic bridge from UI code to visual verification in Simulator. The included [`swift-storybook-visual-check`](.agents/skills/swift-storybook-visual-check/SKILL.md) skill guides a coding agent through the complete check:
+
+1. Select an exact `#Preview` or `BookPage` by name.
+2. Disambiguate duplicate names with the source file and declaration line when needed.
+3. Launch the host app directly into that page.
+4. Verify its source-qualified accessibility identifier and rendered UI.
+5. Capture screenshot evidence only after the correct page is confirmed.
+
+This makes UI validation reproducible without navigating the catalog by hand or adding a separate route for every component.
+
+To onboard another app, use the [`create-storybook-project-skill`](.agents/skills/create-storybook-project-skill/SKILL.md) skill. It connects `StorybookLaunchRequest` to the host's real startup lifecycle, maps project-specific environment variables onto the standard launch arguments, and generates a repository-local visual-check skill with the exact scheme, bundle identifier, runner, and simulator workflow.
+
+> [!NOTE]
+> The host app must first connect `StorybookLaunchRequest` to its startup lifecycle and include `StorybookKit` in the selected build configuration. The package defines the launch contract but cannot replace an app's root UI on its own.
 
 ## Programmable launch
 
@@ -88,46 +153,6 @@ storybook.page|<name-byte-count>:<name>|<fileID-byte-count>:<fileID>|<line>
 ```
 
 The counts are UTF-8 byte counts. This lets automation prove that a qualified request opened the intended page before taking a screenshot.
-
-### Agent visual checks
-
-This repository includes the [`swift-storybook-visual-check`](.agents/skills/swift-storybook-visual-check/SKILL.md) skill. After the host adapter is connected, an Agent can use the same launch arguments to open the exact page, verify its hierarchy, and capture a simulator screenshot without navigating the catalog by hand.
-
-## Example
-
-In app executable module
-
-```swift
-#Preview("Circle") {
-  Circle()
-    .fill(.purple)
-    .frame(width: 100, height: 100)
-}
-```
-
-In a dynamic framework module
-```swift
-#Preview("Circle") {
-  Circle()
-    .fill(.purple)
-    .frame(width: 100, height: 100)
-}
-```
-
-In a static library module
-```swift
-#Preview("Circle") {
-  Circle()
-    .fill(.purple)
-    .frame(width: 100, height: 100)
-}
-```
-
-> [!IMPORTANT]
-> To display all preview codes in a statically linked binary, you may need to link the binary with the -all_load linker flag.
-> This is because the linker does not load symbols into the target binary if it deems them unnecessary.
-
-<img width="150px" src="https://github.com/user-attachments/assets/f849a5a1-c0df-4551-a9a8-c5a0367fe459" alt="list of modules">
 
 ## Maintainers
 
