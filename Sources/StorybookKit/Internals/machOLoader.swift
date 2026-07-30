@@ -23,6 +23,53 @@ import Foundation
 import MachO
 import DeveloperToolsSupport
 
+/// Defines the Mach-O images that belong to an application bundle.
+///
+/// Storybook discovers previews from the app executable and its embedded dynamic
+/// frameworks. Images outside this scope, including iOS system frameworks, are
+/// not part of the host application's preview catalog.
+struct ApplicationMachOImageScope: Sendable {
+
+  // MARK: Lifecycle
+
+  /// Creates a scope rooted at the given application bundle.
+  ///
+  /// - Parameter bundleURL: The root URL of the application bundle.
+  init(bundleURL: URL) {
+    bundlePathComponents = Self.normalizedPathComponents(for: bundleURL)
+  }
+
+  // MARK: Internal
+
+  /// Returns whether the image at the given dyld index belongs to the bundle.
+  ///
+  /// - Parameter imageIndex: The index in dyld's loaded image list.
+  func containsImage(at imageIndex: UInt32) -> Bool {
+    guard let imageName = _dyld_get_image_name(imageIndex) else {
+      return false
+    }
+    return contains(imagePath: String(cString: imageName))
+  }
+
+  /// Returns whether an image path is located inside the bundle.
+  ///
+  /// - Parameter imagePath: The file-system path of a loaded Mach-O image.
+  func contains(imagePath: String) -> Bool {
+    let imagePathComponents = Self.normalizedPathComponents(
+      for: URL(fileURLWithPath: imagePath)
+    )
+    return imagePathComponents.starts(with: bundlePathComponents)
+  }
+
+  // MARK: Private
+
+  private let bundlePathComponents: [String]
+
+  private static func normalizedPathComponents(for url: URL) -> [String] {
+    url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+  }
+}
+
 extension Book {
 
   // MARK: Internal
@@ -52,12 +99,12 @@ extension Book {
   static func findAllPreviews(
     excludeStorybookPageMacro: Bool = true
   ) -> [PreviewRegistryWrapper]? {
-    let moduleName = Bundle.main.bundleURL.deletingPathExtension().lastPathComponent
-    guard !moduleName.isEmpty else {
-      return nil
-    }
+    let imageScope = ApplicationMachOImageScope(bundleURL: Bundle.main.bundleURL)
     var results: [PreviewRegistryWrapper] = []
     for imageIndex in 0 ..< _dyld_image_count() {
+      guard imageScope.containsImage(at: imageIndex) else {
+        continue
+      }
       self.findAllPreviews(
         inImageIndex: .init(imageIndex),
         excludeStorybookPageMacro: excludeStorybookPageMacro,
