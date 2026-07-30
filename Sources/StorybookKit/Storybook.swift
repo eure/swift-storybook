@@ -24,9 +24,7 @@ public struct Storybook: View {
     let bookStore = BookStore(
       book: Book.init(title: "Contents") {
         if let nodes = Book.allBookPreviews() {
-          Book(title: "#Preview") {
-            nodes
-          }
+          nodes
         }
       }
     )
