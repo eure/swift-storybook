@@ -4,6 +4,37 @@ Turn the `#Preview` declarations already in your app into an in-app component ca
 
 Add `Storybook()` once, then keep writing previews as usual. Storybook discovers them at runtime and adds them to the catalog automatically—there is no separate registration step.
 
+```swift
+#Preview("Circle") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
+}
+
+#Preview("Circle2") {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
+}
+
+#Preview {
+  Circle()
+    .fill(.purple)
+    .frame(width: 100, height: 100)
+}
+
+#Preview {
+  UISwitch()
+}
+
+#Preview {
+  UIColorPickerViewController()
+}
+```
+
+<img width="320" alt="simulator_screenshot_4376C04E-79B0-4319-A2FC-1FA5DA25CC79" src="https://github.com/user-attachments/assets/f16cd30c-2b10-45cf-b3a6-b408df0c521b" />
+
+
 ## Motivation
 
 Xcode previews can become difficult to keep working reliably in very large projects, especially when the build is complex. When that happens, existing `#Preview` declarations often stop contributing to the development loop even though they still describe valuable component states.
