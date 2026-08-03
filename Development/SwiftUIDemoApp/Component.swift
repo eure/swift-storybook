@@ -43,6 +43,6 @@ import SwiftUI
   UISwitch()
 }
 
-#Preview {
+#Preview("Color picker controller") {
   UIColorPickerViewController()
 }

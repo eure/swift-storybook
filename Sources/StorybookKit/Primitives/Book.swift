@@ -175,19 +175,22 @@ extension Book {
 
                       return Node.page(
                         .init(
-                          fileID,
-                          registry.line,
+                          fileID: fileID,
+                          line: registry.line,
                           title: pageName,
                           usesScrollView: false,
                           destination: {
                             AnyView(registry.makeView())
+                          },
+                          viewPortPreview: {
+                            registry.makeViewPortPreview()
                           }
                         )
                       )
-
                     }
-                  }))
-
+                  }
+                )
+              )
             }
           }
         )

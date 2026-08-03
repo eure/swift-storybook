@@ -30,12 +30,33 @@ struct SwiftUIDemoAppApp: App {
     arguments: ProcessInfo.processInfo.arguments
   )
 
+  private let viewportExportRequest = ViewportExportRequest(
+    arguments: ProcessInfo.processInfo.arguments
+  )
+
   var body: some Scene {
     WindowGroup {
-      if let storybookLaunchRequest {
-        Storybook(launchRequest: storybookLaunchRequest)
-      } else {
-        ContentView()
+      switch viewportExportRequest {
+      case .disabled:
+        if let storybookLaunchRequest {
+          Storybook(launchRequest: storybookLaunchRequest)
+        } else {
+          ContentView()
+        }
+      case .invalid(let message):
+        StorybookViewportExportFailureView(message: message)
+      case .request(let request):
+        if case .page(let selector) = storybookLaunchRequest {
+          StorybookViewportExportView(
+            selector: selector,
+            exportID: request.exportID,
+            appearance: request.appearance
+          )
+        } else {
+          StorybookViewportExportFailureView(
+            message: "Viewport export requires an exact Storybook page selector."
+          )
+        }
       }
     }
   }

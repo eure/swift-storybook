@@ -236,6 +236,63 @@ struct PreviewRegistryWrapper: Comparable {
     }
   }
 
+  @MainActor
+  func makeViewPortPreview() -> StorybookViewPortPreview {
+    guard let rawPreview = try? previewType.makePreview() else {
+      return .unsupported("Storybook could not create the preview source.")
+    }
+    let preview: FieldReader = .init(rawPreview)
+    let source: FieldReader = (preview["source"] ?? preview["dataSource"])!
+
+    switch source.typeName {
+    case "DeveloperToolsSupport.Preview.DataSource": // iOS 26
+      switch source["preview", "contentCategory", "rawValue"] as String {
+      case "SwiftUI.View":
+        let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+        return .viewport { AnyView(makeBody()) }
+
+      case "UIKit.View":
+        switch source["preview"]!.typeName {
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>":
+          let makeBody: MakeFunctionWrapper<UIView> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return .viewport {
+            AnyView(RawUIViewPreview(makeView: makeBody.callAsFunction))
+          }
+
+        case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>":
+          let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["preview", "structure", "singlePreview", "makeBody"])
+          return .presentedViewController(makeBody.callAsFunction)
+
+        default:
+          return .unsupported("This UIKit preview source is not supported.")
+        }
+
+      default:
+        return .unsupported("This preview content category is not supported.")
+      }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<SwiftUI.ViewPreviewBody>": // iOS 18
+      let makeBody: MakeFunctionWrapper<any SwiftUI.View> = .init(source["structure", "singlePreview", "makeBody"])
+      return .viewport { AnyView(makeBody()) }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>": // iOS 18
+      let makeBody: MakeFunctionWrapper<UIView> = .init(source["structure", "singlePreview", "makeBody"])
+      return .viewport {
+        AnyView(RawUIViewPreview(makeView: makeBody.callAsFunction))
+      }
+
+    case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>": // iOS 18
+      let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["structure", "singlePreview", "makeBody"])
+      return .presentedViewController(makeBody.callAsFunction)
+
+    case "SwiftUI.ViewPreviewSource": // iOS 17
+      let makeView: MakeFunctionWrapper<any SwiftUI.View> = .init(source["makeView"])
+      return .viewport { AnyView(makeView()) }
+
+    default:
+      return .unsupported("This preview source is not supported.")
+    }
+  }
 
   // MARK: Comparable
 
@@ -324,4 +381,15 @@ struct PreviewRegistryWrapper: Comparable {
       closure()
     }
   }
+}
+
+private struct RawUIViewPreview: UIViewRepresentable {
+
+  let makeView: @MainActor () -> UIView
+
+  func makeUIView(context: Context) -> UIView {
+    makeView()
+  }
+
+  func updateUIView(_ uiView: UIView, context: Context) {}
 }
