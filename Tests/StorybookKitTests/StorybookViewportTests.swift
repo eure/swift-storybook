@@ -128,10 +128,33 @@ struct StorybookViewportTests {
       viewport,
       width: 100,
       scale: 1,
-      safeAreaInsets: .init(top: 20, left: 0, bottom: 34, right: 0)
+      safeAreaInsets: .init(top: 20, left: 10, bottom: 34, right: 20)
     )
 
     #expect(rendered.pointSize == .init(width: 100, height: 154))
+  }
+
+  @MainActor
+  @Test("Pixel dimensions match the final bitmap")
+  func pixelDimensions() throws {
+    guard #available(iOS 17.0, *) else { return }
+    let viewport = try makeViewport {
+      AnyView(Color.clear.frame(height: 100.25))
+    }
+
+    let rendered = try StorybookViewportRenderer.render(
+      viewport,
+      width: 100.25,
+      scale: 1
+    )
+    guard let cgImage = rendered.image.cgImage else {
+      Issue.record("Expected UIGraphicsImageRenderer to produce a CGImage")
+      return
+    }
+
+    #expect(
+      rendered.pixelSize == .init(width: cgImage.width, height: cgImage.height)
+    )
   }
 
   @MainActor

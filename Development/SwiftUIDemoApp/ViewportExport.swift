@@ -13,9 +13,21 @@ enum ViewportExportRequest {
 
   case disabled
   case request(Request)
-  case invalid(String)
+  case invalid(message: String, exportID: String?)
+
+  var exportID: String? {
+    switch self {
+    case .disabled:
+      nil
+    case .request(let request):
+      request.exportID
+    case .invalid(_, let exportID):
+      exportID
+    }
+  }
 
   init(arguments: [String]) {
+    let validExportID = Self.validExportID(in: arguments)
     let renderArguments = arguments.indices.filter {
       arguments[$0] == "--storybook-render"
     }
@@ -24,14 +36,20 @@ enum ViewportExportRequest {
       return
     }
     guard renderArguments.count == 1 else {
-      self = .invalid("Viewport export accepts exactly one --storybook-render argument.")
+      self = .invalid(
+        message: "Viewport export accepts exactly one --storybook-render argument.",
+        exportID: validExportID
+      )
       return
     }
     let renderValueIndex = arguments.index(after: renderArguments[0])
     guard arguments.indices.contains(renderValueIndex),
           arguments[renderValueIndex] == "viewport"
     else {
-      self = .invalid("Viewport export requires --storybook-render viewport.")
+      self = .invalid(
+        message: "Viewport export requires --storybook-render viewport.",
+        exportID: validExportID
+      )
       return
     }
 
@@ -39,7 +57,10 @@ enum ViewportExportRequest {
       after: "--storybook-export-id",
       in: arguments
     ) else {
-      self = .invalid("Viewport export requires one --storybook-export-id value.")
+      self = .invalid(
+        message: "Viewport export requires one --storybook-export-id value.",
+        exportID: validExportID
+      )
       return
     }
     guard exportID.isEmpty == false,
@@ -48,7 +69,8 @@ enum ViewportExportRequest {
           })
     else {
       self = .invalid(
-        "Viewport export IDs may contain only letters, numbers, hyphens, and underscores."
+        message: "Viewport export IDs may contain only letters, numbers, hyphens, and underscores.",
+        exportID: validExportID
       )
       return
     }
@@ -57,7 +79,10 @@ enum ViewportExportRequest {
       after: "--storybook-appearance",
       in: arguments
     ), let appearance = StorybookViewportAppearance(rawValue: appearanceValue) else {
-      self = .invalid("Viewport export requires --storybook-appearance light or dark.")
+      self = .invalid(
+        message: "Viewport export requires --storybook-appearance light or dark.",
+        exportID: validExportID
+      )
       return
     }
 
@@ -74,6 +99,18 @@ enum ViewportExportRequest {
       return nil
     }
     return arguments[valueIndex]
+  }
+
+  private static func validExportID(in arguments: [String]) -> String? {
+    guard let exportID = value(after: "--storybook-export-id", in: arguments),
+          exportID.isEmpty == false,
+          exportID.unicodeScalars.allSatisfy({
+            CharacterSet.alphanumerics.contains($0) || $0 == "-" || $0 == "_"
+          })
+    else {
+      return nil
+    }
+    return exportID
   }
 }
 
@@ -125,7 +162,18 @@ struct StorybookViewportExportView: View {
         case .preparing:
           ProgressView()
         case .viewport(let viewport):
-          viewport
+          StorybookSwiftUIExportHost(
+            viewport: viewport,
+            appearance: appearance,
+            scale: displayScale,
+            safeAreaInsets: viewportInsets(from: proxy.safeAreaInsets),
+            onImage: { image in
+              complete(image, renderMode: .viewport)
+            },
+            onFailure: { error in
+              state = .failed(error.localizedDescription)
+            }
+          )
         case .uiView(let preview):
           StorybookUIViewExportHost(
             preview: preview,
@@ -166,21 +214,13 @@ struct StorybookViewportExportView: View {
       }
       .accessibilityIdentifier(state.accessibilityIdentifier)
       .task(id: proxy.size) {
-        export(
-          width: proxy.size.width,
-          scale: displayScale,
-          safeAreaInsets: viewportInsets(from: proxy.safeAreaInsets)
-        )
+        export()
       }
     }
   }
 
   @MainActor
-  private func export(
-    width: CGFloat,
-    scale: CGFloat,
-    safeAreaInsets: UIEdgeInsets
-  ) {
+  private func export() {
     guard case .preparing = state else {
       return
     }
@@ -198,19 +238,6 @@ struct StorybookViewportExportView: View {
       )
       switch preview {
       case .viewport(let viewport):
-        let rendered = try StorybookViewportRenderer.render(
-          viewport,
-          width: width,
-          scale: scale,
-          appearance: appearance,
-          safeAreaInsets: safeAreaInsets
-        )
-        try StorybookViewportArtifact.write(
-          rendered,
-          exportID: exportID,
-          appearance: appearance,
-          renderMode: .viewport
-        )
         state = .viewport(viewport)
       case .uiView(let view):
         state = .uiView(view)

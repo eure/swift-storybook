@@ -196,6 +196,104 @@ public enum StorybookViewportRenderError: Error, Equatable, LocalizedError {
 
 @available(iOS 17.0, *)
 @MainActor
+public final class StorybookViewportHost: UIViewController {
+
+  public let descriptor: BookPageDescriptor
+
+  private let hostedViewController: UIHostingController<AnyView>
+
+  public init(
+    viewport: StorybookViewport,
+    appearance: StorybookViewportAppearance? = nil,
+    safeAreaInsets: UIEdgeInsets = .zero
+  ) {
+    descriptor = viewport.descriptor
+    hostedViewController = UIHostingController(
+      rootView: StorybookViewportRenderer.rootView(
+        viewport: viewport,
+        appearance: appearance,
+        safeAreaInsets: safeAreaInsets
+      )
+    )
+    super.init(nibName: nil, bundle: nil)
+    hostedViewController.safeAreaRegions = []
+    hostedViewController.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  public override func viewDidLoad() {
+    super.viewDidLoad()
+    view.backgroundColor = .clear
+    addChild(hostedViewController)
+    hostedViewController.view.frame = view.bounds
+    hostedViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    view.addSubview(hostedViewController.view)
+    hostedViewController.didMove(toParent: self)
+  }
+
+  public func render(
+    width: CGFloat,
+    scale: CGFloat = UIScreen.main.scale
+  ) throws -> StorybookExportImage {
+    guard width.isFinite, width > 0 else {
+      throw StorybookViewportRenderError.invalidWidth
+    }
+    guard scale.isFinite, scale > 0 else {
+      throw StorybookViewportRenderError.invalidScale
+    }
+
+    loadViewIfNeeded()
+    let fittedSize = hostedViewController.sizeThatFits(
+      in: .init(width: width, height: .greatestFiniteMagnitude)
+    )
+    let pointSize = CGSize(width: width, height: fittedSize.height)
+    guard pointSize.width.isFinite,
+          pointSize.height.isFinite,
+          pointSize.width > 0,
+          pointSize.height > 0
+    else {
+      throw StorybookViewportRenderError.invalidSize
+    }
+    guard StorybookViewportRenderer.projectedPixelCount(
+      pointSize: pointSize,
+      scale: scale
+    ) <= Double(StorybookViewportRenderer.maximumPixelCount) else {
+      throw StorybookViewportRenderError.tooLarge(
+        maximumPixelCount: StorybookViewportRenderer.maximumPixelCount
+      )
+    }
+
+    hostedViewController.view.frame = .init(origin: .zero, size: pointSize)
+    hostedViewController.view.setNeedsLayout()
+    hostedViewController.view.layoutIfNeeded()
+
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    format.opaque = false
+    let image = UIGraphicsImageRenderer(size: pointSize, format: format).image { context in
+      if hostedViewController.view.drawHierarchy(
+        in: .init(origin: .zero, size: pointSize),
+        afterScreenUpdates: true
+      ) == false {
+        hostedViewController.view.layer.render(in: context.cgContext)
+      }
+    }
+
+    return .init(
+      image: image,
+      descriptor: descriptor,
+      pointSize: pointSize,
+      pixelSize: StorybookViewportRenderer.pixelSize(of: image)
+    )
+  }
+}
+
+@available(iOS 17.0, *)
+@MainActor
 public enum StorybookViewportRenderer {
 
   public static let maximumPixelCount = 32_000_000
@@ -214,22 +312,13 @@ public enum StorybookViewportRenderer {
       throw StorybookViewportRenderError.invalidScale
     }
 
-    let safeAreaTop = max(0, safeAreaInsets.top)
-    let safeAreaBottom = max(0, safeAreaInsets.bottom)
-    let content = AnyView(
-      viewport
-        .padding(.top, safeAreaTop)
-        .padding(.bottom, safeAreaBottom)
-    )
-    let rootView: AnyView
-    if let appearance {
-      rootView = AnyView(
-        content.environment(\.colorScheme, appearance.colorScheme)
+    let viewController = UIHostingController(
+      rootView: rootView(
+        viewport: viewport,
+        appearance: appearance,
+        safeAreaInsets: safeAreaInsets
       )
-    } else {
-      rootView = content
-    }
-    let viewController = UIHostingController(rootView: rootView)
+    )
     viewController.safeAreaRegions = []
     viewController.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
     viewController.loadViewIfNeeded()
@@ -245,12 +334,8 @@ public enum StorybookViewportRenderer {
     else {
       throw StorybookViewportRenderError.invalidSize
     }
-
-    let pixelCount = Double(pointSize.width * scale) * Double(pointSize.height * scale)
-    guard pixelCount <= Double(maximumPixelCount) else {
-      throw StorybookViewportRenderError.tooLarge(
-        maximumPixelCount: maximumPixelCount
-      )
+    guard projectedPixelCount(pointSize: pointSize, scale: scale) <= Double(maximumPixelCount) else {
+      throw StorybookViewportRenderError.tooLarge(maximumPixelCount: maximumPixelCount)
     }
 
     viewController.view.bounds = .init(origin: .zero, size: pointSize)
@@ -273,10 +358,42 @@ public enum StorybookViewportRenderer {
       image: image,
       descriptor: viewport.descriptor,
       pointSize: pointSize,
-      pixelSize: .init(
-        width: pointSize.width * scale,
-        height: pointSize.height * scale
-      )
+      pixelSize: pixelSize(of: image)
+    )
+  }
+
+  fileprivate static func rootView(
+    viewport: StorybookViewport,
+    appearance: StorybookViewportAppearance?,
+    safeAreaInsets: UIEdgeInsets
+  ) -> AnyView {
+    let content = AnyView(
+      viewport
+        .padding(.top, max(0, safeAreaInsets.top))
+        .padding(.leading, max(0, safeAreaInsets.left))
+        .padding(.bottom, max(0, safeAreaInsets.bottom))
+        .padding(.trailing, max(0, safeAreaInsets.right))
+    )
+    if let appearance {
+      return AnyView(content.environment(\.colorScheme, appearance.colorScheme))
+    }
+    return content
+  }
+
+  fileprivate static func projectedPixelCount(
+    pointSize: CGSize,
+    scale: CGFloat
+  ) -> Double {
+    Double(ceil(pointSize.width * scale)) * Double(ceil(pointSize.height * scale))
+  }
+
+  fileprivate static func pixelSize(of image: UIImage) -> CGSize {
+    if let cgImage = image.cgImage {
+      return .init(width: cgImage.width, height: cgImage.height)
+    }
+    return .init(
+      width: ceil(image.size.width * image.scale),
+      height: ceil(image.size.height * image.scale)
     )
   }
 }
@@ -303,6 +420,13 @@ public enum StorybookUIViewRenderer {
       throw StorybookUIViewRenderError.notAttachedToWindow
     }
 
+    let safeAreaLeft = max(0, safeAreaInsets.left)
+    let safeAreaRight = max(0, safeAreaInsets.right)
+    let contentWidth = width - safeAreaLeft - safeAreaRight
+    guard contentWidth.isFinite, contentWidth > 0 else {
+      throw StorybookViewportRenderError.invalidSize
+    }
+
     let content = UIView(frame: .init(x: 0, y: 0, width: width, height: host.bounds.height))
     content.backgroundColor = .systemBackground
     content.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
@@ -315,7 +439,7 @@ public enum StorybookUIViewRenderer {
     view.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
     content.addSubview(view)
 
-    let fittedSize = try fittedSize(of: view, in: content, width: width)
+    let fittedSize = try fittedSize(of: view, in: content, width: contentWidth)
     let safeAreaTop = max(0, safeAreaInsets.top)
     let safeAreaBottom = max(0, safeAreaInsets.bottom)
     let pointSize = CGSize(
@@ -324,14 +448,17 @@ public enum StorybookUIViewRenderer {
     )
     content.bounds.size = pointSize
     content.frame.size = pointSize
+    view.frame.origin.x += safeAreaLeft
     view.frame.origin.y = safeAreaTop
     view.setNeedsLayout()
     view.layoutIfNeeded()
     content.setNeedsLayout()
     content.layoutIfNeeded()
 
-    let pixelCount = Double(pointSize.width * scale) * Double(pointSize.height * scale)
-    guard pixelCount <= Double(StorybookViewportRenderer.maximumPixelCount) else {
+    guard StorybookViewportRenderer.projectedPixelCount(
+      pointSize: pointSize,
+      scale: scale
+    ) <= Double(StorybookViewportRenderer.maximumPixelCount) else {
       throw StorybookViewportRenderError.tooLarge(
         maximumPixelCount: StorybookViewportRenderer.maximumPixelCount
       )
@@ -353,10 +480,7 @@ public enum StorybookUIViewRenderer {
       image: image,
       descriptor: preview.descriptor,
       pointSize: pointSize,
-      pixelSize: .init(
-        width: pointSize.width * scale,
-        height: pointSize.height * scale
-      )
+      pixelSize: StorybookViewportRenderer.pixelSize(of: image)
     )
   }
 
@@ -502,8 +626,10 @@ public enum StorybookPresentedViewControllerRenderer {
       throw StorybookViewportRenderError.invalidSize
     }
 
-    let pixelCount = Double(pointSize.width * scale) * Double(pointSize.height * scale)
-    guard pixelCount <= Double(StorybookViewportRenderer.maximumPixelCount) else {
+    guard StorybookViewportRenderer.projectedPixelCount(
+      pointSize: pointSize,
+      scale: scale
+    ) <= Double(StorybookViewportRenderer.maximumPixelCount) else {
       throw StorybookViewportRenderError.tooLarge(
         maximumPixelCount: StorybookViewportRenderer.maximumPixelCount
       )
@@ -528,10 +654,7 @@ public enum StorybookPresentedViewControllerRenderer {
       image: image,
       descriptor: preview.descriptor,
       pointSize: pointSize,
-      pixelSize: .init(
-        width: pointSize.width * scale,
-        height: pointSize.height * scale
-      )
+      pixelSize: StorybookViewportRenderer.pixelSize(of: image)
     )
   }
 }

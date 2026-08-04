@@ -36,9 +36,9 @@ struct SwiftUIDemoAppApp: App {
     let viewportExportRequest = ViewportExportRequest(arguments: arguments)
     self.viewportExportRequest = viewportExportRequest
 
-    if case .request(let request) = viewportExportRequest {
+    if let exportID = viewportExportRequest.exportID {
       do {
-        try StorybookViewportArtifact.prepare(exportID: request.exportID)
+        try StorybookViewportArtifact.prepare(exportID: exportID)
         viewportExportPreparationFailure = nil
       } catch {
         viewportExportPreparationFailure = error.localizedDescription
@@ -57,7 +57,7 @@ struct SwiftUIDemoAppApp: App {
         } else {
           ContentView()
         }
-      case .invalid(let message):
+      case .invalid(let message, _):
         StorybookViewportExportFailureView(message: message)
       case .request(let request):
         if let viewportExportPreparationFailure {
