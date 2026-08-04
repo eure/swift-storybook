@@ -18,8 +18,10 @@ let package = Package(
     .target(
       name: "StorybookKit",
       dependencies: [
+        "StorybookC",
       ]
     ),
+    .target(name: "StorybookC"),
     .testTarget(
       name: "StorybookKitTests",
       dependencies: [

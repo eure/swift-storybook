@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+import StorybookC
 
 @available(iOS 17.0, *)
 struct PreviewRegistryWrapper: Comparable {
@@ -185,37 +186,27 @@ struct PreviewRegistryWrapper: Comparable {
       }
 
     case "UIKit.UIViewPreviewSource": // iOS 17
-      // Unsupported due to iOS 17 not supporting casting between non-sendable closure types
+      let makeView: MakeFunctionWrapper<UIView> = .init(nonSendable: source["makeView"])
       return {
-        VStack {
-          if let title, !title.isEmpty {
-            Text(title)
-              .font(.system(size: 17, weight: .semibold))
+        BookPreview(
+          fileID,
+          line,
+          title: title.flatMap({ $0.isEmpty ? nil : $0 }),
+          viewBlock: { _ in
+            makeView()
           }
-          Text("UIView Preview not supported on iOS 17")
-            .foregroundStyle(Color.red)
-            .font(.caption.monospacedDigit())
-          Text("\(fileID):\(line)")
-            .font(.caption.monospacedDigit())
-          BookSpacer(height: 16)
-        }
+        )
       }
 
     case "UIKit.UIViewControllerPreviewSource": // iOS 17
-      // Unsupported due to iOS 17 not supporting casting between non-sendable closure types
+      let makeViewController: MakeFunctionWrapper<UIViewController> = .init(nonSendable: source["makeViewController"])
       return {
-        VStack {
-          if let title, !title.isEmpty {
-            Text(title)
-              .font(.system(size: 17, weight: .semibold))
+        BookPresent(
+          title: title.flatMap({ $0.isEmpty ? nil : $0 }) ?? source.typeName,
+          presentingViewControllerBlock: {
+            makeViewController()
           }
-          Text("UIViewController Preview not supported on iOS 17")
-            .foregroundStyle(Color.red)
-            .font(.caption.monospacedDigit())
-          Text("\(fileID):\(line)")
-            .font(.caption.monospacedDigit())
-          BookSpacer(height: 16)
-        }
+        )
       }
 
     case let sourceTypeName:
@@ -288,6 +279,20 @@ struct PreviewRegistryWrapper: Comparable {
     case "SwiftUI.ViewPreviewSource": // iOS 17
       let makeView: MakeFunctionWrapper<any SwiftUI.View> = .init(source["makeView"])
       return .viewport { AnyView(makeView()) }
+
+    case "UIKit.UIViewPreviewSource": // iOS 17
+      let makeView: MakeFunctionWrapper<UIView> = .init(
+        nonSendable: source["makeView"]
+      )
+      return .viewport {
+        AnyView(RawUIViewPreview(makeView: makeView.callAsFunction))
+      }
+
+    case "UIKit.UIViewControllerPreviewSource": // iOS 17
+      let makeViewController: MakeFunctionWrapper<UIViewController> = .init(
+        nonSendable: source["makeViewController"]
+      )
+      return .presentedViewController(makeViewController.callAsFunction)
 
     default:
       return .unsupported("This preview source is not supported.")
@@ -366,20 +371,52 @@ struct PreviewRegistryWrapper: Comparable {
   @MainActor
   private struct MakeFunctionWrapper<T> {
 
-    typealias Closure = @MainActor () -> T
+    typealias Closure = @MainActor @Sendable () -> T
     private let closure: Closure
 
     init(_ closure: Any) {
-      // TODO: We need a workaround to avoid implicit @Sendable from @MainActor closures
       self.closure = unsafeBitCast(
         closure,
         to: Closure.self
       )
     }
+    
+    @available(iOS, introduced: 17.0, obsoleted: 18.0)
+    @available(macCatalyst, unavailable)
+    @available(macOS, unavailable)
+    init(nonSendable closure: Any) where T: AnyObject {
+      self.closure = {
+        Self.invokeNonSendableClosure(closure)
+      }
+    }
 
     func callAsFunction() -> T {
       closure()
     }
+
+    private static func invokeNonSendableClosure(_ closure: Any) -> T where T: AnyObject {
+      func invoke<Closure>(_ closure: Closure) -> T {
+        let functionSize = MemoryLayout<UnsafeRawPointer>.stride
+        let contextSize = MemoryLayout<UnsafeRawPointer?>.stride
+        precondition(
+          MemoryLayout<Closure>.size == functionSize + contextSize,
+          "Unexpected Swift closure representation"
+        )
+        let (function, context) = withUnsafeBytes(of: closure) {
+          (
+            $0.load(as: UnsafeRawPointer.self),
+            $0.load(
+              fromByteOffset: functionSize,
+              as: UnsafeRawPointer?.self
+            )
+          )
+        }
+        let result = StorybookInvokeLegacyObjectClosure(function, context)!
+        return Unmanaged<T>.fromOpaque(result).takeRetainedValue()
+      }
+      return _openExistential(closure, do: invoke)
+    }
+
   }
 }
 
