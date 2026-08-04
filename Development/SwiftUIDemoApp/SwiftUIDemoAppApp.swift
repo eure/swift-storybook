@@ -26,13 +26,27 @@ import SwiftUI
 @main
 struct SwiftUIDemoAppApp: App {
 
-  private let storybookLaunchRequest = StorybookLaunchRequest(
-    arguments: ProcessInfo.processInfo.arguments
-  )
+  private let storybookLaunchRequest: StorybookLaunchRequest?
+  private let viewportExportPreparationFailure: String?
+  private let viewportExportRequest: ViewportExportRequest
 
-  private let viewportExportRequest = ViewportExportRequest(
-    arguments: ProcessInfo.processInfo.arguments
-  )
+  init() {
+    let arguments = ProcessInfo.processInfo.arguments
+    storybookLaunchRequest = .init(arguments: arguments)
+    let viewportExportRequest = ViewportExportRequest(arguments: arguments)
+    self.viewportExportRequest = viewportExportRequest
+
+    if case .request(let request) = viewportExportRequest {
+      do {
+        try StorybookViewportArtifact.prepare(exportID: request.exportID)
+        viewportExportPreparationFailure = nil
+      } catch {
+        viewportExportPreparationFailure = error.localizedDescription
+      }
+    } else {
+      viewportExportPreparationFailure = nil
+    }
+  }
 
   var body: some Scene {
     WindowGroup {
@@ -46,7 +60,11 @@ struct SwiftUIDemoAppApp: App {
       case .invalid(let message):
         StorybookViewportExportFailureView(message: message)
       case .request(let request):
-        if case .page(let selector) = storybookLaunchRequest {
+        if let viewportExportPreparationFailure {
+          StorybookViewportExportFailureView(
+            message: viewportExportPreparationFailure
+          )
+        } else if case .page(let selector) = storybookLaunchRequest {
           StorybookViewportExportView(
             selector: selector,
             exportID: request.exportID,

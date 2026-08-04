@@ -133,7 +133,7 @@ struct StorybookViewportExportView: View {
             scale: displayScale,
             safeAreaInsets: viewportInsets(from: proxy.safeAreaInsets),
             onImage: { image in
-              finish(image, renderMode: .viewport)
+              complete(image, renderMode: .viewport)
             },
             onFailure: { error in
               state = .failed(error.localizedDescription)
@@ -145,7 +145,7 @@ struct StorybookViewportExportView: View {
             appearance: appearance,
             scale: displayScale,
             onImage: { image in
-              finish(
+              complete(
                 image,
                 renderMode: .presentedViewController
               )
@@ -186,6 +186,7 @@ struct StorybookViewportExportView: View {
     }
 
     do {
+      try StorybookViewportArtifact.prepare(exportID: exportID)
       let bookStore = BookStore(
         book: Book(title: "Contents") {
           Book.allBookPreviews() ?? []
@@ -204,7 +205,12 @@ struct StorybookViewportExportView: View {
           appearance: appearance,
           safeAreaInsets: safeAreaInsets
         )
-        finish(rendered, renderMode: .viewport)
+        try StorybookViewportArtifact.write(
+          rendered,
+          exportID: exportID,
+          appearance: appearance,
+          renderMode: .viewport
+        )
         state = .viewport(viewport)
       case .uiView(let view):
         state = .uiView(view)
@@ -226,7 +232,7 @@ struct StorybookViewportExportView: View {
   }
 
   @MainActor
-  private func finish(
+  private func complete(
     _ rendered: StorybookExportImage,
     renderMode: StorybookImageRenderMode
   ) {
@@ -258,7 +264,7 @@ struct StorybookViewportExportFailureView: View {
   }
 }
 
-private struct StorybookViewportArtifact: Codable {
+struct StorybookViewportArtifact: Codable {
 
   let schemaVersion: Int
   let exportID: String
@@ -273,6 +279,21 @@ private struct StorybookViewportArtifact: Codable {
   let pixelHeight: Double
   let sha256: String
 
+  static func prepare(exportID: String) throws {
+    let fileManager = FileManager.default
+    let directory = try exportDirectory(
+      exportID: exportID,
+      fileManager: fileManager
+    )
+    for fileName in ["image.png", "manifest.json"] {
+      let url = directory.appendingPathComponent(fileName)
+      guard fileManager.fileExists(atPath: url.path) else {
+        continue
+      }
+      try fileManager.removeItem(at: url)
+    }
+  }
+
   static func write(
     _ rendered: StorybookExportImage,
     exportID: String,
@@ -284,18 +305,9 @@ private struct StorybookViewportArtifact: Codable {
     }
 
     let fileManager = FileManager.default
-    let applicationSupport = try fileManager.url(
-      for: .applicationSupportDirectory,
-      in: .userDomainMask,
-      appropriateFor: nil,
-      create: true
-    )
-    let directory = applicationSupport
-      .appendingPathComponent("StorybookViewportExports", isDirectory: true)
-      .appendingPathComponent(exportID, isDirectory: true)
-    try fileManager.createDirectory(
-      at: directory,
-      withIntermediateDirectories: true
+    let directory = try exportDirectory(
+      exportID: exportID,
+      fileManager: fileManager
     )
 
     let imageURL = directory.appendingPathComponent("image.png")
@@ -321,6 +333,26 @@ private struct StorybookViewportArtifact: Codable {
     try JSONEncoder().encode(artifact).write(to: manifestURL, options: .atomic)
   }
 
+  private static func exportDirectory(
+    exportID: String,
+    fileManager: FileManager
+  ) throws -> URL {
+    let applicationSupport = try fileManager.url(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    )
+    let directory = applicationSupport
+      .appendingPathComponent("StorybookViewportExports", isDirectory: true)
+      .appendingPathComponent(exportID, isDirectory: true)
+    try fileManager.createDirectory(
+      at: directory,
+      withIntermediateDirectories: true
+    )
+    return directory
+  }
+
   private enum ExportError: LocalizedError {
     case pngEncodingFailed
 
@@ -333,7 +365,7 @@ private struct StorybookViewportArtifact: Codable {
   }
 }
 
-private enum StorybookImageRenderMode: String, Codable {
+enum StorybookImageRenderMode: String, Codable {
   case viewport
   case presentedViewController
 }

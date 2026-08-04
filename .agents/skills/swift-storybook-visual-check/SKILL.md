@@ -58,6 +58,7 @@ chrome, fits a root `ScrollView` to full height, and exports a
 presentedViewController`). Launch a fully qualified page with:
 
 ```text
+--storybook <name> --storybook-file <module/file.swift> --storybook-line <line>
 --storybook-render viewport --storybook-export-id <safe-id> --storybook-appearance light|dark
 ```
 
