@@ -365,21 +365,6 @@ public enum StorybookUIViewRenderer {
     in content: UIView,
     width: CGFloat
   ) throws -> CGSize {
-    if let scrollView = view as? UIScrollView {
-      scrollView.frame = .init(
-        origin: .zero,
-        size: .init(width: width, height: content.bounds.height)
-      )
-      scrollView.setNeedsLayout()
-      scrollView.layoutIfNeeded()
-      let height = scrollView.contentSize.height
-      guard height.isFinite, height > 0 else {
-        throw StorybookViewportRenderError.invalidSize
-      }
-      scrollView.frame.size.height = height
-      return .init(width: width, height: height)
-    }
-
     let proposedSize = CGSize(width: width, height: .greatestFiniteMagnitude)
     let fittedSize = view.sizeThatFits(proposedSize)
     let intrinsicSize = view.intrinsicContentSize
@@ -387,17 +372,88 @@ public enum StorybookUIViewRenderer {
       width: validDimension(fittedSize.width) ? fittedSize.width : intrinsicSize.width,
       height: validDimension(fittedSize.height) ? fittedSize.height : intrinsicSize.height
     )
-    guard validDimension(viewSize.width), validDimension(viewSize.height) else {
-      throw StorybookViewportRenderError.invalidSize
+    view.frame = .init(
+      origin: .zero,
+      size: .init(
+        width: width,
+        height: max(
+          validDimension(viewSize.height) ? viewSize.height : 0,
+          content.bounds.height
+        )
+      )
+    )
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+
+    let scrollViews = scrollViews(in: view)
+    guard scrollViews.isEmpty == false else {
+      guard validDimension(viewSize.width), validDimension(viewSize.height) else {
+        throw StorybookViewportRenderError.invalidSize
+      }
+
+      view.frame = .init(
+        x: (width - viewSize.width) / 2,
+        y: 0,
+        width: viewSize.width,
+        height: viewSize.height
+      )
+      return .init(width: width, height: viewSize.height)
     }
 
+    var height = validDimension(viewSize.height) ? viewSize.height : 0
+    for scrollView in scrollViews {
+      let scrollHeight = scrollView.contentSize.height
+      guard scrollHeight.isFinite, scrollHeight >= 0 else {
+        throw StorybookViewportRenderError.invalidSize
+      }
+      scrollView.frame.size.height = scrollHeight
+      if scrollView === view {
+        height = max(height, scrollHeight)
+        continue
+      }
+      expandAncestors(of: scrollView, through: view)
+      height = max(
+        height,
+        scrollView.convert(scrollView.bounds, to: view).maxY
+      )
+    }
+    guard validDimension(height) else {
+      throw StorybookViewportRenderError.invalidSize
+    }
     view.frame = .init(
-      x: (width - viewSize.width) / 2,
-      y: 0,
-      width: viewSize.width,
-      height: viewSize.height
+      origin: .zero,
+      size: .init(width: width, height: height)
     )
-    return .init(width: width, height: viewSize.height)
+    return .init(width: width, height: height)
+  }
+
+  private static func scrollViews(in view: UIView) -> [UIScrollView] {
+    var result: [UIScrollView] = []
+    func collect(from view: UIView) {
+      if let scrollView = view as? UIScrollView {
+        result.append(scrollView)
+      }
+      view.subviews.forEach(collect)
+    }
+    collect(from: view)
+    return result
+  }
+
+  private static func expandAncestors(
+    of scrollView: UIScrollView,
+    through rootView: UIView
+  ) {
+    var view: UIView = scrollView
+    while let superview = view.superview {
+      superview.frame.size.height = max(
+        superview.frame.height,
+        view.frame.maxY
+      )
+      if superview === rootView {
+        return
+      }
+      view = superview
+    }
   }
 
   private static func validDimension(_ value: CGFloat) -> Bool {

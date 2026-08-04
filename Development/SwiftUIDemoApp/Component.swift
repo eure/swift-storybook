@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import SwiftUI
+import UIKit
 
 #Preview("Circle") {
   Circle()
@@ -45,4 +46,85 @@ import SwiftUI
 
 #Preview("Color picker controller") {
   UIColorPickerViewController()
+}
+
+#Preview("Long scrolling view") {
+  longScrollingView()
+}
+
+@MainActor
+private func longScrollingView() -> UIView {
+  let root = UIView()
+  root.backgroundColor = .systemBackground
+
+  let scrollView = UIScrollView()
+  let stackView = UIStackView()
+  stackView.axis = .vertical
+  stackView.spacing = 12
+
+  root.addSubview(scrollView)
+  scrollView.translatesAutoresizingMaskIntoConstraints = false
+  NSLayoutConstraint.activate([
+    scrollView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+    scrollView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+    scrollView.topAnchor.constraint(equalTo: root.topAnchor),
+    scrollView.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+  ])
+
+  scrollView.addSubview(stackView)
+  stackView.translatesAutoresizingMaskIntoConstraints = false
+  NSLayoutConstraint.activate([
+    stackView.leadingAnchor.constraint(
+      equalTo: scrollView.contentLayoutGuide.leadingAnchor,
+      constant: 20
+    ),
+    stackView.trailingAnchor.constraint(
+      equalTo: scrollView.contentLayoutGuide.trailingAnchor,
+      constant: -20
+    ),
+    stackView.topAnchor.constraint(
+      equalTo: scrollView.contentLayoutGuide.topAnchor,
+      constant: 20
+    ),
+    stackView.bottomAnchor.constraint(
+      equalTo: scrollView.contentLayoutGuide.bottomAnchor,
+      constant: -20
+    ),
+    stackView.widthAnchor.constraint(
+      equalTo: scrollView.frameLayoutGuide.widthAnchor,
+      constant: -40
+    ),
+  ])
+
+  for index in 1...10 {
+    let section = UIView()
+    section.backgroundColor = [
+      UIColor.systemBlue,
+      .systemIndigo,
+      .systemPurple,
+      .systemPink,
+      .systemRed,
+      .systemOrange,
+      .systemYellow,
+      .systemGreen,
+      .systemTeal,
+      .systemCyan,
+    ][index - 1]
+    section.layer.cornerRadius = 16
+    section.heightAnchor.constraint(equalToConstant: 120).isActive = true
+
+    let label = UILabel()
+    label.text = "Section \(index)"
+    label.font = .preferredFont(forTextStyle: .title2)
+    label.textColor = .white
+    section.addSubview(label)
+    label.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      label.leadingAnchor.constraint(equalTo: section.leadingAnchor, constant: 20),
+      label.centerYAnchor.constraint(equalTo: section.centerYAnchor),
+    ])
+    stackView.addArrangedSubview(section)
+  }
+
+  return root
 }
