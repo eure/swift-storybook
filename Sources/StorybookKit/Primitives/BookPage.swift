@@ -126,6 +126,7 @@ public struct BookPage: BookView, Identifiable, Sendable {
 
 enum StorybookViewPortPreview {
   case viewport(@MainActor () -> AnyView)
+  case uiView(@MainActor () -> UIView)
   case presentedViewController(@MainActor () -> UIViewController)
   case unsupported(String)
 }

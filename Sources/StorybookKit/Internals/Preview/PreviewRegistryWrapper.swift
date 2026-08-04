@@ -246,9 +246,7 @@ struct PreviewRegistryWrapper: Comparable {
         switch source["preview"]!.typeName {
         case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>":
           let makeBody: MakeFunctionWrapper<UIView> = .init(source["preview", "structure", "singlePreview", "makeBody"])
-          return .viewport {
-            AnyView(RawUIViewPreview(makeView: makeBody.callAsFunction))
-          }
+          return .uiView(makeBody.callAsFunction)
 
         case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>":
           let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["preview", "structure", "singlePreview", "makeBody"])
@@ -268,9 +266,7 @@ struct PreviewRegistryWrapper: Comparable {
 
     case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIView>": // iOS 18
       let makeBody: MakeFunctionWrapper<UIView> = .init(source["structure", "singlePreview", "makeBody"])
-      return .viewport {
-        AnyView(RawUIViewPreview(makeView: makeBody.callAsFunction))
-      }
+      return .uiView(makeBody.callAsFunction)
 
     case "DeveloperToolsSupport.DefaultPreviewSource<__C.UIViewController>": // iOS 18
       let makeBody: MakeFunctionWrapper<UIViewController> = .init(source["structure", "singlePreview", "makeBody"])
@@ -284,9 +280,7 @@ struct PreviewRegistryWrapper: Comparable {
       let makeView: MakeFunctionWrapper<UIView> = .init(
         nonSendable: source["makeView"]
       )
-      return .viewport {
-        AnyView(RawUIViewPreview(makeView: makeView.callAsFunction))
-      }
+      return .uiView(makeView.callAsFunction)
 
     case "UIKit.UIViewControllerPreviewSource": // iOS 17
       let makeViewController: MakeFunctionWrapper<UIViewController> = .init(
@@ -418,15 +412,4 @@ struct PreviewRegistryWrapper: Comparable {
     }
 
   }
-}
-
-private struct RawUIViewPreview: UIViewRepresentable {
-
-  let makeView: @MainActor () -> UIView
-
-  func makeUIView(context: Context) -> UIView {
-    makeView()
-  }
-
-  func updateUIView(_ uiView: UIView, context: Context) {}
 }

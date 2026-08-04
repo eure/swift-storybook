@@ -117,6 +117,24 @@ struct StorybookViewportTests {
   }
 
   @MainActor
+  @Test("Safe-area space is included in a fitted viewport")
+  func safeAreaInsets() throws {
+    guard #available(iOS 17.0, *) else { return }
+    let viewport = try makeViewport {
+      AnyView(Color.clear.frame(height: 100))
+    }
+
+    let rendered = try StorybookViewportRenderer.render(
+      viewport,
+      width: 100,
+      scale: 1,
+      safeAreaInsets: .init(top: 20, left: 0, bottom: 34, right: 0)
+    )
+
+    #expect(rendered.pointSize == .init(width: 100, height: 154))
+  }
+
+  @MainActor
   @Test("Invalid dimensions are rejected before drawing")
   func invalidDimensions() throws {
     guard #available(iOS 17.0, *) else { return }

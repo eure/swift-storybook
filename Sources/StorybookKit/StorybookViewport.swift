@@ -46,6 +46,7 @@ public struct StorybookViewport: View {
 @available(iOS 17.0, *)
 public enum StorybookPreviewExport {
   case viewport(StorybookViewport)
+  case uiView(StorybookUIView)
   case presentedViewController(StorybookPresentedViewController)
 
   @MainActor
@@ -62,6 +63,13 @@ public enum StorybookPreviewExport {
           destination: destination
         )
       )
+    case .uiView(let makeView):
+      self = .uiView(
+        .init(
+          descriptor: page.descriptor,
+          makeView: makeView
+        )
+      )
     case .presentedViewController(let makeViewController):
       self = .presentedViewController(
         .init(
@@ -72,6 +80,26 @@ public enum StorybookPreviewExport {
     case .unsupported(let reason):
       throw StorybookPreviewExportError.unsupportedPreview(reason)
     }
+  }
+}
+
+@available(iOS 17.0, *)
+public struct StorybookUIView {
+
+  public let descriptor: BookPageDescriptor
+  private let factory: @MainActor () -> UIView
+
+  fileprivate init(
+    descriptor: BookPageDescriptor,
+    makeView: @escaping @MainActor () -> UIView
+  ) {
+    self.descriptor = descriptor
+    self.factory = makeView
+  }
+
+  @MainActor
+  public func makeView() -> UIView {
+    factory()
   }
 }
 
@@ -176,7 +204,8 @@ public enum StorybookViewportRenderer {
     _ viewport: StorybookViewport,
     width: CGFloat,
     scale: CGFloat = UIScreen.main.scale,
-    appearance: StorybookViewportAppearance? = nil
+    appearance: StorybookViewportAppearance? = nil,
+    safeAreaInsets: UIEdgeInsets = .zero
   ) throws -> StorybookExportImage {
     guard width.isFinite, width > 0 else {
       throw StorybookViewportRenderError.invalidWidth
@@ -185,15 +214,23 @@ public enum StorybookViewportRenderer {
       throw StorybookViewportRenderError.invalidScale
     }
 
+    let safeAreaTop = max(0, safeAreaInsets.top)
+    let safeAreaBottom = max(0, safeAreaInsets.bottom)
+    let content = AnyView(
+      viewport
+        .padding(.top, safeAreaTop)
+        .padding(.bottom, safeAreaBottom)
+    )
     let rootView: AnyView
     if let appearance {
       rootView = AnyView(
-        viewport.environment(\.colorScheme, appearance.colorScheme)
+        content.environment(\.colorScheme, appearance.colorScheme)
       )
     } else {
-      rootView = AnyView(viewport)
+      rootView = content
     }
     let viewController = UIHostingController(rootView: rootView)
+    viewController.safeAreaRegions = []
     viewController.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
     viewController.loadViewIfNeeded()
 
@@ -241,6 +278,142 @@ public enum StorybookViewportRenderer {
         height: pointSize.height * scale
       )
     )
+  }
+}
+
+@available(iOS 17.0, *)
+@MainActor
+public enum StorybookUIViewRenderer {
+
+  public static func render(
+    _ preview: StorybookUIView,
+    width: CGFloat,
+    scale: CGFloat = UIScreen.main.scale,
+    appearance: StorybookViewportAppearance? = nil,
+    safeAreaInsets: UIEdgeInsets = .zero,
+    in host: UIView
+  ) throws -> StorybookExportImage {
+    guard width.isFinite, width > 0 else {
+      throw StorybookViewportRenderError.invalidWidth
+    }
+    guard scale.isFinite, scale > 0 else {
+      throw StorybookViewportRenderError.invalidScale
+    }
+    guard host.window != nil else {
+      throw StorybookUIViewRenderError.notAttachedToWindow
+    }
+
+    let content = UIView(frame: .init(x: 0, y: 0, width: width, height: host.bounds.height))
+    content.backgroundColor = .systemBackground
+    content.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
+    host.addSubview(content)
+    defer {
+      content.removeFromSuperview()
+    }
+
+    let view = preview.makeView()
+    view.overrideUserInterfaceStyle = appearance?.userInterfaceStyle ?? .unspecified
+    content.addSubview(view)
+
+    let fittedSize = try fittedSize(of: view, in: content, width: width)
+    let safeAreaTop = max(0, safeAreaInsets.top)
+    let safeAreaBottom = max(0, safeAreaInsets.bottom)
+    let pointSize = CGSize(
+      width: width,
+      height: fittedSize.height + safeAreaTop + safeAreaBottom
+    )
+    content.bounds.size = pointSize
+    content.frame.size = pointSize
+    view.frame.origin.y = safeAreaTop
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+    content.setNeedsLayout()
+    content.layoutIfNeeded()
+
+    let pixelCount = Double(pointSize.width * scale) * Double(pointSize.height * scale)
+    guard pixelCount <= Double(StorybookViewportRenderer.maximumPixelCount) else {
+      throw StorybookViewportRenderError.tooLarge(
+        maximumPixelCount: StorybookViewportRenderer.maximumPixelCount
+      )
+    }
+
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    format.opaque = false
+    let image = UIGraphicsImageRenderer(size: pointSize, format: format).image { context in
+      if content.drawHierarchy(
+        in: .init(origin: .zero, size: pointSize),
+        afterScreenUpdates: true
+      ) == false {
+        content.layer.render(in: context.cgContext)
+      }
+    }
+
+    return .init(
+      image: image,
+      descriptor: preview.descriptor,
+      pointSize: pointSize,
+      pixelSize: .init(
+        width: pointSize.width * scale,
+        height: pointSize.height * scale
+      )
+    )
+  }
+
+  private static func fittedSize(
+    of view: UIView,
+    in content: UIView,
+    width: CGFloat
+  ) throws -> CGSize {
+    if let scrollView = view as? UIScrollView {
+      scrollView.frame = .init(
+        origin: .zero,
+        size: .init(width: width, height: content.bounds.height)
+      )
+      scrollView.setNeedsLayout()
+      scrollView.layoutIfNeeded()
+      let height = scrollView.contentSize.height
+      guard height.isFinite, height > 0 else {
+        throw StorybookViewportRenderError.invalidSize
+      }
+      scrollView.frame.size.height = height
+      return .init(width: width, height: height)
+    }
+
+    let proposedSize = CGSize(width: width, height: .greatestFiniteMagnitude)
+    let fittedSize = view.sizeThatFits(proposedSize)
+    let intrinsicSize = view.intrinsicContentSize
+    let viewSize = CGSize(
+      width: validDimension(fittedSize.width) ? fittedSize.width : intrinsicSize.width,
+      height: validDimension(fittedSize.height) ? fittedSize.height : intrinsicSize.height
+    )
+    guard validDimension(viewSize.width), validDimension(viewSize.height) else {
+      throw StorybookViewportRenderError.invalidSize
+    }
+
+    view.frame = .init(
+      x: (width - viewSize.width) / 2,
+      y: 0,
+      width: viewSize.width,
+      height: viewSize.height
+    )
+    return .init(width: width, height: viewSize.height)
+  }
+
+  private static func validDimension(_ value: CGFloat) -> Bool {
+    value.isFinite && value > 0 && value != UIView.noIntrinsicMetric
+  }
+}
+
+@available(iOS 17.0, *)
+public enum StorybookUIViewRenderError: Error, Equatable, LocalizedError {
+  case notAttachedToWindow
+
+  public var errorDescription: String? {
+    switch self {
+    case .notAttachedToWindow:
+      "The UIKit viewport must be attached to a window before rendering."
+    }
   }
 }
 

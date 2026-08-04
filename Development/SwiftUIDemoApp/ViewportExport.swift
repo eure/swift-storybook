@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 import StorybookKit
 import SwiftUI
+import UIKit
 
 enum ViewportExportRequest {
 
@@ -81,6 +82,7 @@ struct StorybookViewportExportView: View {
   private enum ExportState {
     case preparing
     case viewport(StorybookViewport)
+    case uiView(StorybookUIView)
     case presentedViewController(StorybookPresentedViewController)
     case complete
     case failed(String)
@@ -89,7 +91,7 @@ struct StorybookViewportExportView: View {
       switch self {
       case .preparing:
         return "storybook.viewport.export.preparing"
-      case .viewport, .presentedViewController:
+      case .viewport, .uiView, .presentedViewController:
         return "storybook.viewport.export.ready"
       case .complete:
         return "storybook.viewport.export.complete"
@@ -124,6 +126,19 @@ struct StorybookViewportExportView: View {
           ProgressView()
         case .viewport(let viewport):
           viewport
+        case .uiView(let preview):
+          StorybookUIViewExportHost(
+            preview: preview,
+            appearance: appearance,
+            scale: displayScale,
+            safeAreaInsets: viewportInsets(from: proxy.safeAreaInsets),
+            onImage: { image in
+              finish(image, renderMode: .viewport)
+            },
+            onFailure: { error in
+              state = .failed(error.localizedDescription)
+            }
+          )
         case .presentedViewController(let preview):
           StorybookPresentedViewControllerExportHost(
             preview: preview,
@@ -151,13 +166,21 @@ struct StorybookViewportExportView: View {
       }
       .accessibilityIdentifier(state.accessibilityIdentifier)
       .task(id: proxy.size) {
-        export(width: proxy.size.width, scale: displayScale)
+        export(
+          width: proxy.size.width,
+          scale: displayScale,
+          safeAreaInsets: viewportInsets(from: proxy.safeAreaInsets)
+        )
       }
     }
   }
 
   @MainActor
-  private func export(width: CGFloat, scale: CGFloat) {
+  private func export(
+    width: CGFloat,
+    scale: CGFloat,
+    safeAreaInsets: UIEdgeInsets
+  ) {
     guard case .preparing = state else {
       return
     }
@@ -178,16 +201,28 @@ struct StorybookViewportExportView: View {
           viewport,
           width: width,
           scale: scale,
-          appearance: appearance
+          appearance: appearance,
+          safeAreaInsets: safeAreaInsets
         )
         finish(rendered, renderMode: .viewport)
         state = .viewport(viewport)
+      case .uiView(let view):
+        state = .uiView(view)
       case .presentedViewController(let controller):
         state = .presentedViewController(controller)
       }
     } catch {
       state = .failed(error.localizedDescription)
     }
+  }
+
+  private func viewportInsets(from insets: EdgeInsets) -> UIEdgeInsets {
+    .init(
+      top: max(insets.top, 16),
+      left: insets.leading,
+      bottom: max(insets.bottom, 16),
+      right: insets.trailing
+    )
   }
 
   @MainActor
@@ -202,9 +237,7 @@ struct StorybookViewportExportView: View {
         appearance: appearance,
         renderMode: renderMode
       )
-      if case .presentedViewController = state {
-        state = .complete
-      }
+      state = .complete
     } catch {
       state = .failed(error.localizedDescription)
     }
