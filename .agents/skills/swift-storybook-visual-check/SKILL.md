@@ -52,10 +52,28 @@ Use the host's own scheme, bundle identifier, and supported simulator. Do not as
 
 ## Capture evidence
 
-Capture a simulator screenshot only after hierarchy verification succeeds. Remove transient menus, keyboards, touch markers, and unrelated system overlays when possible. Keep the requested page visible at the state being evaluated, save the screenshot to a stable artifact path, and report that path with the verified page selector.
+Prefer a viewport artifact when the host supports it: it excludes Storybook
+chrome, fits a root `ScrollView` to full height, and exports a
+`UIViewController` as its whole presented window (`renderMode:
+presentedViewController`). Launch a fully qualified page with:
 
-If the device tooling starts an interaction session, always end that session
-after capture or failure before reporting the result.
+```text
+--storybook <name> --storybook-file <module/file.swift> --storybook-line <line>
+--storybook-render viewport --storybook-export-id <safe-id> --storybook-appearance light|dark
+```
+
+Retrieve `image.png` and `manifest.json` from
+`Library/Application Support/StorybookViewportExports/<id>` through
+`simctl get_app_container … data`; verify selector, render mode, appearance,
+dimensions, and SHA-256. For this demo, use
+the host's simulator tooling directly. Remove transient menus, keyboards,
+touch markers, and unrelated system overlays before a controller presentation
+is rendered. Its Simulator screenshot is diagnostic-only.
+
+Otherwise, verify the hierarchy first, remove transient menus, keyboards,
+touch markers, and unrelated system overlays when possible, then capture a
+clean simulator screenshot to a stable path. Never use clipboard or
+photo-library transport; end any interaction session before reporting.
 
 ## Fail honestly
 

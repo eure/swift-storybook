@@ -95,7 +95,7 @@ public struct BookPreview: BookView {
 
       controlView
 
-      Text("\(fileID):\(line)")
+      Text(verbatim: "\(fileID):\(line)")
         .font(.caption.monospacedDigit())
 
       BookSpacer(height: 16)

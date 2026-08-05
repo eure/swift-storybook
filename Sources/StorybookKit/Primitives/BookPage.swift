@@ -21,6 +21,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 public struct DeclarationIdentifier: Hashable, Codable, Sendable {
 
@@ -56,6 +57,7 @@ public struct BookPage: BookView, Identifiable, Sendable {
   public let usesScrollView: Bool
   public let title: String
   public let destination: () -> AnyView
+  let viewPortPreview: @MainActor () -> StorybookViewPortPreview
   /// The name and source location used to select this page programmatically.
   public let descriptor: BookPageDescriptor
   public nonisolated let declarationIdentifier: DeclarationIdentifier
@@ -69,11 +71,35 @@ public struct BookPage: BookView, Identifiable, Sendable {
   ) {
     self.title = title
     self.usesScrollView = usesScrollView
-    self.destination = { AnyView(destination()) }
+    let makeDestination: @MainActor () -> AnyView = {
+      AnyView(destination())
+    }
+    self.destination = makeDestination
+    self.viewPortPreview = { .viewport(makeDestination) }
     self.descriptor = .init(
       name: title,
       fileID: String(fileID),
       line: String(describing: line)
+    )
+    self.declarationIdentifier = .init()
+  }
+
+  init(
+    fileID: String,
+    line: Int,
+    title: String,
+    usesScrollView: Bool,
+    destination: @escaping @MainActor () -> AnyView,
+    viewPortPreview: @escaping @MainActor () -> StorybookViewPortPreview
+  ) {
+    self.title = title
+    self.usesScrollView = usesScrollView
+    self.destination = destination
+    self.viewPortPreview = viewPortPreview
+    self.descriptor = .init(
+      name: title,
+      fileID: fileID,
+      line: String(line)
     )
     self.declarationIdentifier = .init()
   }
@@ -96,6 +122,13 @@ public struct BookPage: BookView, Identifiable, Sendable {
     }
 
   }
+}
+
+enum StorybookViewPortPreview {
+  case viewport(@MainActor () -> AnyView)
+  case uiView(@MainActor () -> UIView)
+  case presentedViewController(@MainActor () -> UIViewController)
+  case unsupported(String)
 }
 
 /// Renders one page consistently for catalog links and programmable navigation.

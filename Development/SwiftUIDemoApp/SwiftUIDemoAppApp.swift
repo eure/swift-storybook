@@ -26,16 +26,55 @@ import SwiftUI
 @main
 struct SwiftUIDemoAppApp: App {
 
-  private let storybookLaunchRequest = StorybookLaunchRequest(
-    arguments: ProcessInfo.processInfo.arguments
-  )
+  private let storybookLaunchRequest: StorybookLaunchRequest?
+  private let viewportExportPreparationFailure: String?
+  private let viewportExportRequest: ViewportExportRequest
+
+  init() {
+    let arguments = ProcessInfo.processInfo.arguments
+    storybookLaunchRequest = .init(arguments: arguments)
+    let viewportExportRequest = ViewportExportRequest(arguments: arguments)
+    self.viewportExportRequest = viewportExportRequest
+
+    if let exportID = viewportExportRequest.exportID {
+      do {
+        try StorybookViewportArtifact.prepare(exportID: exportID)
+        viewportExportPreparationFailure = nil
+      } catch {
+        viewportExportPreparationFailure = error.localizedDescription
+      }
+    } else {
+      viewportExportPreparationFailure = nil
+    }
+  }
 
   var body: some Scene {
     WindowGroup {
-      if let storybookLaunchRequest {
-        Storybook(launchRequest: storybookLaunchRequest)
-      } else {
-        ContentView()
+      switch viewportExportRequest {
+      case .disabled:
+        if let storybookLaunchRequest {
+          Storybook(launchRequest: storybookLaunchRequest)
+        } else {
+          ContentView()
+        }
+      case .invalid(let message, _):
+        StorybookViewportExportFailureView(message: message)
+      case .request(let request):
+        if let viewportExportPreparationFailure {
+          StorybookViewportExportFailureView(
+            message: viewportExportPreparationFailure
+          )
+        } else if case .page(let selector) = storybookLaunchRequest {
+          StorybookViewportExportView(
+            selector: selector,
+            exportID: request.exportID,
+            appearance: request.appearance
+          )
+        } else {
+          StorybookViewportExportFailureView(
+            message: "Viewport export requires an exact Storybook page selector."
+          )
+        }
       }
     }
   }

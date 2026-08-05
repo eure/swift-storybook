@@ -109,7 +109,12 @@ Storybook provides a deterministic bridge from UI code to visual verification in
 2. Disambiguate duplicate names with the source file and declaration line when needed.
 3. Launch the host app directly into that page.
 4. Verify its source-qualified accessibility identifier and rendered UI.
-5. Capture screenshot evidence only after the correct page is confirmed.
+5. Prefer a host viewport artifact when available: it excludes Storybook chrome,
+   expands root scroll content, and captures `UIViewController` previews as a
+   full presented window. Verify its manifest selector, render mode, appearance,
+   dimensions, and SHA-256 through `simctl get_app_container`.
+6. Otherwise, capture a clean simulator screenshot only after hierarchy
+   verification.
 
 This makes UI validation reproducible without navigating the catalog by hand or adding a separate route for every component.
 
