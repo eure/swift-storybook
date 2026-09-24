@@ -192,20 +192,18 @@ The counts are UTF-8 byte counts. This lets automation prove that a qualified re
 
 ## Appearance
 
-Every page shows an appearance menu in its navigation bar that switches the page's preview content between System, Light, and Dark without relaunching the app. Only that page changes: its content and its navigation bar, whose title stays legible over the content. The catalog keeps the host's appearance. The selected color scheme also reaches the trait collection of hosted UIKit views and view controllers, so UIKit dynamic colors follow it. System inherits the host's appearance. Switching the appearance of a visible page also exposes views that do not handle trait changes, such as colors resolved once into `CGColor`.
+Each page has a System / Light / Dark menu in its navigation bar. It switches only that page, including UIKit views inside it, without relaunching the app. Sheets and alerts presented from the page are not affected.
 
-Sheets, alerts, and other UI presented outside the page are not affected; use an app-wide override on the host to check them.
-
-A host can choose the appearance each opened page starts with, for example from its own launch argument, and observe the appearance of the visible page:
+Set the appearance pages start with, and observe the visible page's appearance:
 
 ```swift
 Storybook(launchRequest: launchRequest)
   .appearance(.dark) { appearance in
-    // Keep host-owned state, such as an accessibility identifier, in sync.
+    // Keep host-owned state in sync.
   }
 ```
 
-Every opened page starts with the host-provided appearance, and a selection from a page's menu applies to that page only. `onChange` is called when a page appears and when its selection changes. `StorybookDisplayRootView` provides the same `appearance(_:onChange:)` method. The menu and its options expose the accessibility identifiers `storybook.appearance.menu` and `storybook.appearance.<system|light|dark>`.
+The menu exposes the accessibility identifiers `storybook.appearance.menu` and `storybook.appearance.<system|light|dark>`.
 
 ## Maintainers
 
