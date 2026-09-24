@@ -46,7 +46,6 @@ public struct Storybook: View {
     )
   }
 
-  /// See `StorybookDisplayRootView.appearance(_:onChange:)`.
   public func appearance(
     _ initialAppearance: StorybookAppearance,
     onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
