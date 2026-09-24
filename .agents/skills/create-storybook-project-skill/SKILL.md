@@ -46,7 +46,7 @@ Reuse an existing host adapter when present. Otherwise implement the narrowest a
 6. Compiles only in the configurations where StorybookKit is linked.
 7. Preserves an existing manual in-app Storybook entry independently of programmable startup.
 
-Add host-specific options, such as a light/dark override, outside `StorybookLaunchRequest`. Parse them deterministically and convert invalid values into a visible `StorybookLaunchDiagnostic`.
+Add host-specific options, such as a light/dark override, outside `StorybookLaunchRequest`. Parse them deterministically and convert invalid values into a visible `StorybookLaunchDiagnostic`. Pass a parsed light/dark override to `appearance(_:onChange:)` so opened pages start from it, and update host-owned appearance markers from `onChange`, which reports the visible page's appearance.
 
 ## 3. Expose a project launcher interface
 

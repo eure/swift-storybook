@@ -3,7 +3,7 @@ import UIKit
 
 public struct StorybookDisplayRootView: View {
 
-  private let book: BookContainer
+  private var book: BookContainer
 
   /// Creates a Storybook that opens its catalog, subject to the user's
   /// auto-open-last-page setting.
@@ -66,6 +66,30 @@ public struct StorybookDisplayRootView: View {
     }
     .ignoresSafeArea()
 
+  }
+
+  /// Sets the appearance each opened page starts with and observes the
+  /// appearance of the visible page.
+  ///
+  /// The appearance applies only to a page's preview content and its
+  /// navigation bar; the catalog keeps the host's appearance. Every opened page starts
+  /// with `initialAppearance`, and a selection from a page's appearance menu
+  /// applies to that page only.
+  ///
+  /// - Parameters:
+  ///   - initialAppearance: The appearance each opened page starts with.
+  ///   - onChange: Called with the visible page's appearance when a page
+  ///     appears or its selection changes.
+  public func appearance(
+    _ initialAppearance: StorybookAppearance,
+    onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
+  ) -> Self {
+    var modified = self
+    modified.book.appearanceConfiguration = .init(
+      initialAppearance: initialAppearance,
+      onChange: onChange
+    )
+    return modified
   }
 
   @MainActor
@@ -179,6 +203,7 @@ private struct BookContainer: View {
 
   private let store: BookStore
   private let initialPresentation: BookInitialPresentation
+  var appearanceConfiguration = StorybookAppearanceConfiguration()
 
   init(
     store: BookStore,
@@ -189,6 +214,12 @@ private struct BookContainer: View {
   }
 
   var body: some View {
+    content
+      .environment(\.storybookAppearanceConfiguration, appearanceConfiguration)
+  }
+
+  @ViewBuilder
+  private var content: some View {
     switch initialPresentation {
     case .automaticCatalog:
       BookCatalogView(

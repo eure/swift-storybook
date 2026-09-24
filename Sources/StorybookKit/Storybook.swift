@@ -4,6 +4,7 @@ import SwiftUI
 public struct Storybook: View {
 
   private let launchRequest: StorybookLaunchRequest?
+  private var appearanceConfiguration = StorybookAppearanceConfiguration()
 
   /// Creates a Storybook that opens its catalog.
   public init() {
@@ -29,13 +30,40 @@ public struct Storybook: View {
       }
     )
 
-    if let launchRequest {
-      StorybookDisplayRootView(
-        bookStore: bookStore,
-        launchRequest: launchRequest
-      )
-    } else {
-      StorybookDisplayRootView(bookStore: bookStore)
-    }
+    let rootView =
+      if let launchRequest {
+        StorybookDisplayRootView(
+          bookStore: bookStore,
+          launchRequest: launchRequest
+        )
+      } else {
+        StorybookDisplayRootView(bookStore: bookStore)
+      }
+
+    rootView.appearance(
+      appearanceConfiguration.initialAppearance,
+      onChange: appearanceConfiguration.onChange
+    )
+  }
+
+  /// Sets the appearance each opened page starts with and observes the
+  /// appearance of the visible page.
+  ///
+  /// See `StorybookDisplayRootView.appearance(_:onChange:)`.
+  ///
+  /// - Parameters:
+  ///   - initialAppearance: The appearance each opened page starts with.
+  ///   - onChange: Called with the visible page's appearance when a page
+  ///     appears or its selection changes.
+  public func appearance(
+    _ initialAppearance: StorybookAppearance,
+    onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
+  ) -> Self {
+    var modified = self
+    modified.appearanceConfiguration = .init(
+      initialAppearance: initialAppearance,
+      onChange: onChange
+    )
+    return modified
   }
 }

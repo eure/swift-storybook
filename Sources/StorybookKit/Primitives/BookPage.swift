@@ -135,8 +135,16 @@ enum StorybookViewPortPreview {
 struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
+  @Environment(\.storybookAppearanceConfiguration) private var appearanceConfiguration
 
   let page: BookPage
+
+  /// A selection made from this page's menu; `nil` uses the host's initial appearance.
+  @State private var selectedAppearance: StorybookAppearance?
+
+  private var appearance: StorybookAppearance {
+    selectedAppearance ?? appearanceConfiguration.initialAppearance
+  }
 
   var body: some View {
     Group {
@@ -148,12 +156,30 @@ struct BookPageDestination: View {
         Display(content: page.destination)
       }
     }
+    .storybookAppearance(appearance)
     .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
     .listStyle(.plain)
     .navigationTitle(page.title)
     .navigationBarTitleDisplayMode(.inline)
+    // Page content scrolls under the navigation bar, so the bar's title
+    // follows the page's appearance to stay legible over it.
+    .toolbarColorScheme(appearance.colorScheme, for: .navigationBar)
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        StorybookAppearanceMenu(
+          appearance: Binding(
+            get: { appearance },
+            set: { selectedAppearance = $0 }
+          )
+        )
+      }
+    }
     .onAppear {
       context?.onOpen(pageID: page.id)
+      appearanceConfiguration.onChange?(appearance)
+    }
+    .onChange(of: appearance) { newValue in
+      appearanceConfiguration.onChange?(newValue)
     }
   }
 }
