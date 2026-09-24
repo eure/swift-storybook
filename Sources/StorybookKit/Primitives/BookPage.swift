@@ -139,7 +139,6 @@ struct BookPageDestination: View {
 
   let page: BookPage
 
-  /// A selection made from this page's menu; `nil` uses the host's initial appearance.
   @State private var selectedAppearance: StorybookAppearance?
 
   private var appearance: StorybookAppearance {
@@ -161,8 +160,7 @@ struct BookPageDestination: View {
     .listStyle(.plain)
     .navigationTitle(page.title)
     .navigationBarTitleDisplayMode(.inline)
-    // Page content scrolls under the navigation bar, so the bar's title
-    // follows the page's appearance to stay legible over it.
+    // The iOS 26 navigation bar is transparent, so its title follows the page.
     .toolbarColorScheme(appearance.colorScheme, for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {

@@ -23,9 +23,6 @@
 import SwiftUI
 import UIKit
 
-/// Compares SwiftUI semantic styles with UIKit dynamic colors.
-///
-/// Both halves should switch together when the Storybook appearance changes.
 private struct AppearanceDemo: View {
 
   var body: some View {

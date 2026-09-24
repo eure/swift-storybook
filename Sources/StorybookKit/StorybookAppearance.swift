@@ -1,11 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The interface style Storybook applies to a page's preview content.
-///
-/// The style is scoped to the page content through the SwiftUI color scheme,
-/// which SwiftUI also bridges to the trait collection of hosted UIKit views
-/// and view controllers, so UIKit dynamic colors resolve with it.
+/// The interface style applied to a Storybook page.
 public enum StorybookAppearance: String, CaseIterable, Sendable {
   /// Inherits the interface style of the host.
   case system
@@ -57,7 +53,6 @@ public enum StorybookAppearance: String, CaseIterable, Sendable {
   }
 }
 
-/// The host-provided initial appearance and change observer.
 struct StorybookAppearanceConfiguration {
   var initialAppearance: StorybookAppearance = .system
   var onChange: (@MainActor (StorybookAppearance) -> Void)?
@@ -67,7 +62,6 @@ extension EnvironmentValues {
   @Entry var storybookAppearanceConfiguration = StorybookAppearanceConfiguration()
 }
 
-/// A toolbar menu that switches the appearance of the current page.
 struct StorybookAppearanceMenu: View {
 
   @Binding var appearance: StorybookAppearance
@@ -91,16 +85,9 @@ struct StorybookAppearanceMenu: View {
 
 extension View {
 
-  /// Resolves this content with an explicit appearance, leaving `.system`
-  /// to inherit the surrounding appearance.
-  ///
-  /// The view identity is the same for every appearance, so switching keeps
-  /// the content's state and exercises its handling of trait changes.
   func storybookAppearance(_ appearance: StorybookAppearance) -> some View {
     self
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      // An opaque background fills the page, including behind the navigation
-      // bar, so the page and its bar read as one appearance.
       .background(appearance.colorScheme == nil ? Color.clear : Color(uiColor: .systemBackground))
       .transformEnvironment(\.colorScheme) { colorScheme in
         if let explicitColorScheme = appearance.colorScheme {

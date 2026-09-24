@@ -68,18 +68,8 @@ public struct StorybookDisplayRootView: View {
 
   }
 
-  /// Sets the appearance each opened page starts with and observes the
-  /// appearance of the visible page.
-  ///
-  /// The appearance applies only to a page's preview content and its
-  /// navigation bar; the catalog keeps the host's appearance. Every opened page starts
-  /// with `initialAppearance`, and a selection from a page's appearance menu
-  /// applies to that page only.
-  ///
-  /// - Parameters:
-  ///   - initialAppearance: The appearance each opened page starts with.
-  ///   - onChange: Called with the visible page's appearance when a page
-  ///     appears or its selection changes.
+  /// Sets the appearance each opened page starts with. `onChange` receives the
+  /// visible page's appearance when a page appears or its selection changes.
   public func appearance(
     _ initialAppearance: StorybookAppearance,
     onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
