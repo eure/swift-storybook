@@ -192,7 +192,7 @@ The counts are UTF-8 byte counts. This lets automation prove that a qualified re
 
 ## Appearance
 
-Each page has a System / Light / Dark menu in its navigation bar. It switches only that page, including UIKit views inside it, without relaunching the app. Sheets and alerts presented from the page are not affected.
+Each page has an appearance button in its navigation bar. Tap it to toggle Light and Dark; long-press it to return to System, which inherits the host's appearance. It switches only that page, including UIKit views inside it, without relaunching the app. Sheets and alerts presented from the page are not affected.
 
 Set the appearance pages start with, and observe the visible page's appearance:
 
@@ -203,7 +203,7 @@ Storybook(launchRequest: launchRequest)
   }
 ```
 
-The menu exposes the accessibility identifiers `storybook.appearance.menu` and `storybook.appearance.<system|light|dark>`.
+The button exposes the accessibility identifier `storybook.appearance.toggle`, and its long-press options `storybook.appearance.<system|light|dark>`.
 
 ## Maintainers
 

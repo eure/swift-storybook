@@ -62,24 +62,29 @@ extension EnvironmentValues {
   @Entry var storybookAppearanceConfiguration = StorybookAppearanceConfiguration()
 }
 
-struct StorybookAppearanceMenu: View {
+struct StorybookAppearanceToggle: View {
 
   @Binding var appearance: StorybookAppearance
+  let inheritedColorScheme: ColorScheme
 
   var body: some View {
-    Menu {
+    Button {
+      let colorScheme = appearance.colorScheme ?? inheritedColorScheme
+      appearance = colorScheme == .dark ? .light : .dark
+    } label: {
+      Image(systemName: appearance.systemImageName)
+    }
+    .contextMenu {
       Picker("Appearance", selection: $appearance) {
         ForEach(StorybookAppearance.allCases, id: \.self) { value in
           Label(value.title, systemImage: value.systemImageName)
             .accessibilityIdentifier("storybook.appearance.\(value.rawValue)")
         }
       }
-    } label: {
-      Image(systemName: appearance.systemImageName)
     }
     .accessibilityLabel("Appearance")
     .accessibilityValue(appearance.title)
-    .accessibilityIdentifier("storybook.appearance.menu")
+    .accessibilityIdentifier("storybook.appearance.toggle")
   }
 }
 

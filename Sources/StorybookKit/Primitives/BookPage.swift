@@ -136,6 +136,7 @@ struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
   @Environment(\.storybookAppearanceConfiguration) private var appearanceConfiguration
+  @Environment(\.colorScheme) private var inheritedColorScheme
 
   let page: BookPage
 
@@ -164,11 +165,12 @@ struct BookPageDestination: View {
     .toolbarColorScheme(appearance.colorScheme, for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        StorybookAppearanceMenu(
+        StorybookAppearanceToggle(
           appearance: Binding(
             get: { appearance },
             set: { selectedAppearance = $0 }
-          )
+          ),
+          inheritedColorScheme: inheritedColorScheme
         )
       }
     }
