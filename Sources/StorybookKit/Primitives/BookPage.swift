@@ -143,7 +143,9 @@ struct BookPageDestination: View {
   @State private var selectedAppearance: StorybookAppearance?
 
   private var appearance: StorybookAppearance {
-    selectedAppearance ?? appearanceConfiguration.initialAppearance
+    selectedAppearance
+      ?? appearanceConfiguration.initialAppearance
+      ?? StorybookAppearance(inheritedColorScheme)
   }
 
   var body: some View {
@@ -169,8 +171,7 @@ struct BookPageDestination: View {
           appearance: Binding(
             get: { appearance },
             set: { selectedAppearance = $0 }
-          ),
-          inheritedColorScheme: inheritedColorScheme
+          )
         )
       }
     }

@@ -3,15 +3,15 @@ import UIKit
 
 /// The interface style applied to a Storybook page.
 public enum StorybookAppearance: String, CaseIterable, Sendable {
-  /// Inherits the interface style of the host.
-  case system
   case light
   case dark
 
+  init(_ colorScheme: ColorScheme) {
+    self = colorScheme == .dark ? .dark : .light
+  }
+
   public var userInterfaceStyle: UIUserInterfaceStyle {
     switch self {
-    case .system:
-      .unspecified
     case .light:
       .light
     case .dark:
@@ -19,21 +19,26 @@ public enum StorybookAppearance: String, CaseIterable, Sendable {
     }
   }
 
-  var colorScheme: ColorScheme? {
+  var colorScheme: ColorScheme {
     switch self {
-    case .system:
-      nil
     case .light:
       .light
     case .dark:
       .dark
+    }
+  }
+
+  var toggled: StorybookAppearance {
+    switch self {
+    case .light:
+      .dark
+    case .dark:
+      .light
     }
   }
 
   var title: String {
     switch self {
-    case .system:
-      "System"
     case .light:
       "Light"
     case .dark:
@@ -43,8 +48,6 @@ public enum StorybookAppearance: String, CaseIterable, Sendable {
 
   var systemImageName: String {
     switch self {
-    case .system:
-      "circle.lefthalf.filled"
     case .light:
       "sun.max"
     case .dark:
@@ -54,7 +57,7 @@ public enum StorybookAppearance: String, CaseIterable, Sendable {
 }
 
 struct StorybookAppearanceConfiguration {
-  var initialAppearance: StorybookAppearance = .system
+  var initialAppearance: StorybookAppearance?
   var onChange: (@MainActor (StorybookAppearance) -> Void)?
 }
 
@@ -65,22 +68,12 @@ extension EnvironmentValues {
 struct StorybookAppearanceToggle: View {
 
   @Binding var appearance: StorybookAppearance
-  let inheritedColorScheme: ColorScheme
 
   var body: some View {
     Button {
-      let colorScheme = appearance.colorScheme ?? inheritedColorScheme
-      appearance = colorScheme == .dark ? .light : .dark
+      appearance = appearance.toggled
     } label: {
       Image(systemName: appearance.systemImageName)
-    }
-    .contextMenu {
-      Picker("Appearance", selection: $appearance) {
-        ForEach(StorybookAppearance.allCases, id: \.self) { value in
-          Label(value.title, systemImage: value.systemImageName)
-            .accessibilityIdentifier("storybook.appearance.\(value.rawValue)")
-        }
-      }
     }
     .accessibilityLabel("Appearance")
     .accessibilityValue(appearance.title)
@@ -93,11 +86,7 @@ extension View {
   func storybookAppearance(_ appearance: StorybookAppearance) -> some View {
     self
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(appearance.colorScheme == nil ? Color.clear : Color(uiColor: .systemBackground))
-      .transformEnvironment(\.colorScheme) { colorScheme in
-        if let explicitColorScheme = appearance.colorScheme {
-          colorScheme = explicitColorScheme
-        }
-      }
+      .background(Color(uiColor: .systemBackground))
+      .environment(\.colorScheme, appearance.colorScheme)
   }
 }

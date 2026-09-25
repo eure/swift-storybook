@@ -68,10 +68,11 @@ public struct StorybookDisplayRootView: View {
 
   }
 
-  /// Sets the appearance each opened page starts with. `onChange` receives the
-  /// visible page's appearance when a page appears or its selection changes.
+  /// Sets the appearance each opened page starts with; `nil` starts with the
+  /// host's appearance. `onChange` receives the visible page's appearance when
+  /// a page appears or its selection changes.
   public func appearance(
-    _ initialAppearance: StorybookAppearance,
+    _ initialAppearance: StorybookAppearance?,
     onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
   ) -> Self {
     var modified = self

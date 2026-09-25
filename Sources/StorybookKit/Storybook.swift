@@ -47,7 +47,7 @@ public struct Storybook: View {
   }
 
   public func appearance(
-    _ initialAppearance: StorybookAppearance,
+    _ initialAppearance: StorybookAppearance?,
     onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
   ) -> Self {
     var modified = self
