@@ -135,19 +135,15 @@ enum StorybookViewPortPreview {
 struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
-  @Environment(\.storybookAppearanceConfiguration) private var appearanceConfiguration
   @Environment(\.colorScheme) private var inheritedColorScheme
 
   let page: BookPage
 
-  @State private var selectedAppearance: StorybookAppearance?
+  /// The color scheme toggled on this page; `nil` inherits the host's.
+  @State private var toggledColorScheme: ColorScheme?
 
-  private var defaultAppearance: StorybookAppearance {
-    appearanceConfiguration.initialAppearance ?? StorybookAppearance(inheritedColorScheme)
-  }
-
-  private var appearance: StorybookAppearance {
-    selectedAppearance ?? defaultAppearance
+  private var colorScheme: ColorScheme {
+    toggledColorScheme ?? inheritedColorScheme
   }
 
   var body: some View {
@@ -160,33 +156,29 @@ struct BookPageDestination: View {
         Display(content: page.destination)
       }
     }
-    .storybookAppearance(appearance)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color(uiColor: .systemBackground))
+    .environment(\.colorScheme, colorScheme)
     .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
     .listStyle(.plain)
     .navigationTitle(page.title)
     .navigationBarTitleDisplayMode(.inline)
     // The iOS 26 navigation bar is transparent, so its title follows the page.
-    .toolbarColorScheme(appearance.colorScheme, for: .navigationBar)
+    .toolbarColorScheme(colorScheme, for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        StorybookAppearanceToggle(
-          appearance: Binding(
-            get: { appearance },
-            set: { selectedAppearance = $0 }
-          )
-        )
+        Button {
+          toggledColorScheme = colorScheme == .dark ? .light : .dark
+        } label: {
+          Image(systemName: colorScheme == .dark ? "moon" : "sun.max")
+        }
+        .accessibilityLabel("Appearance")
+        .accessibilityValue(colorScheme == .dark ? "Dark" : "Light")
+        .accessibilityIdentifier("storybook.appearance.toggle")
       }
     }
     .onAppear {
       context?.onOpen(pageID: page.id)
-      appearanceConfiguration.onChange?(appearance)
-    }
-    .onChange(of: appearance) { newValue in
-      appearanceConfiguration.onChange?(newValue)
-    }
-    // The most recent change wins: a new host appearance replaces a toggled one.
-    .onChange(of: defaultAppearance) { _ in
-      selectedAppearance = nil
     }
   }
 }

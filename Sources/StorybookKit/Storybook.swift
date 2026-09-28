@@ -4,16 +4,6 @@ import SwiftUI
 public struct Storybook: View {
 
   private let launchRequest: StorybookLaunchRequest?
-  private var appearanceConfiguration = StorybookAppearanceConfiguration()
-
-  // Built once, so re-rendering with a new appearance doesn't reload every preview.
-  @StateObject private var bookStore = BookStore(
-    book: Book.init(title: "Contents") {
-      if let nodes = Book.allBookPreviews() {
-        nodes
-      }
-    }
-  )
 
   /// Creates a Storybook that opens its catalog.
   public init() {
@@ -31,31 +21,21 @@ public struct Storybook: View {
   }
 
   public var body: some View {
-    let rootView =
-      if let launchRequest {
-        StorybookDisplayRootView(
-          bookStore: bookStore,
-          launchRequest: launchRequest
-        )
-      } else {
-        StorybookDisplayRootView(bookStore: bookStore)
+    let bookStore = BookStore(
+      book: Book.init(title: "Contents") {
+        if let nodes = Book.allBookPreviews() {
+          nodes
+        }
       }
-
-    rootView.appearance(
-      appearanceConfiguration.initialAppearance,
-      onChange: appearanceConfiguration.onChange
     )
-  }
 
-  public func appearance(
-    _ initialAppearance: StorybookAppearance?,
-    onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
-  ) -> Self {
-    var modified = self
-    modified.appearanceConfiguration = .init(
-      initialAppearance: initialAppearance,
-      onChange: onChange
-    )
-    return modified
+    if let launchRequest {
+      StorybookDisplayRootView(
+        bookStore: bookStore,
+        launchRequest: launchRequest
+      )
+    } else {
+      StorybookDisplayRootView(bookStore: bookStore)
+    }
   }
 }

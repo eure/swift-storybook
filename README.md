@@ -192,18 +192,9 @@ The counts are UTF-8 byte counts. This lets automation prove that a qualified re
 
 ## Appearance
 
-Each page has a Light / Dark toggle in its navigation bar. A page opens in the host's appearance, and a tap switches only that page, including UIKit views inside it, without relaunching the app. Sheets and alerts presented from the page are not affected.
+Each page has a Light / Dark toggle in its navigation bar. A page opens in the host's appearance, and a tap switches only that page, including UIKit views inside it, without relaunching the app. The catalog and other pages keep the host's appearance.
 
-Set the appearance pages start with, and observe the visible page's appearance:
-
-```swift
-Storybook(launchRequest: launchRequest)
-  .appearance(.dark) { appearance in
-    // Keep host-owned state in sync.
-  }
-```
-
-The most recent change wins: when the host passes a different appearance, open pages switch to it, replacing one chosen with the toggle.
+The toggle sets the SwiftUI color scheme of the page's content. A SwiftUI sheet presented from the page inherits it for its content, but its background keeps the host's appearance, and alerts keep the host's appearance. To check presented UI, change the host's appearance instead.
 
 The toggle exposes the accessibility identifier `storybook.appearance.toggle`.
 
