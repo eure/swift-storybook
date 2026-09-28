@@ -61,8 +61,9 @@ public struct StorybookDisplayRootView: View {
   public var body: some View {
 
     _ViewControllerHost {
-      let controller = _ViewController(content: book)
-      return controller
+      _ViewController(content: book)
+    } update: { controller, _ in
+      controller.update(content: book)
     }
     .ignoresSafeArea()
 
@@ -71,6 +72,9 @@ public struct StorybookDisplayRootView: View {
   /// Sets the appearance each opened page starts with; `nil` starts with the
   /// host's appearance. `onChange` receives the visible page's appearance when
   /// a page appears or its selection changes.
+  ///
+  /// The most recent change wins: when the host passes a different appearance,
+  /// open pages switch to it, replacing an appearance chosen with the toggle.
   public func appearance(
     _ initialAppearance: StorybookAppearance?,
     onChange: (@MainActor (StorybookAppearance) -> Void)? = nil
@@ -109,8 +113,9 @@ public struct BookActionHosting<Content: View>: View {
   public var body: some View {
 
     _ViewControllerHost {
-      let controller = _ViewController(content: content)
-      return controller
+      _ViewController(content: content)
+    } update: { controller, _ in
+      controller.update(content: content)
     }
     .ignoresSafeArea()
 
@@ -454,7 +459,18 @@ private struct SearchResultNodeView: View {
 
 final class _ViewController<Content: View>: UIViewController {
 
-  private let content: Content
+  private struct Root: View {
+    let content: Content
+    let targetViewController: UIViewController
+
+    var body: some View {
+      content
+        .environment(\.storybook_targetViewController, targetViewController)
+    }
+  }
+
+  private var content: Content
+  private var hosting: UIHostingController<Root>?
 
   init(content: Content) {
     self.content = content
@@ -465,14 +481,19 @@ final class _ViewController<Content: View>: UIViewController {
     fatalError("init(coder:) has not been implemented")
   }
 
+  /// Replaces the hosted content, keeping its SwiftUI state.
+  func update(content: Content) {
+    self.content = content
+    hosting?.rootView = Root(content: content, targetViewController: self)
+  }
+
   override func viewDidLoad() {
     super.viewDidLoad()
 
     let hosting = UIHostingController(
-      rootView:
-        content
-        .environment(\.storybook_targetViewController, self)
+      rootView: Root(content: content, targetViewController: self)
     )
+    self.hosting = hosting
 
     addChild(hosting)
     view.addSubview(hosting.view)

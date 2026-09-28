@@ -6,6 +6,15 @@ public struct Storybook: View {
   private let launchRequest: StorybookLaunchRequest?
   private var appearanceConfiguration = StorybookAppearanceConfiguration()
 
+  // Built once, so re-rendering with a new appearance doesn't reload every preview.
+  @StateObject private var bookStore = BookStore(
+    book: Book.init(title: "Contents") {
+      if let nodes = Book.allBookPreviews() {
+        nodes
+      }
+    }
+  )
+
   /// Creates a Storybook that opens its catalog.
   public init() {
     self.launchRequest = nil
@@ -22,14 +31,6 @@ public struct Storybook: View {
   }
 
   public var body: some View {
-    let bookStore = BookStore(
-      book: Book.init(title: "Contents") {
-        if let nodes = Book.allBookPreviews() {
-          nodes
-        }
-      }
-    )
-
     let rootView =
       if let launchRequest {
         StorybookDisplayRootView(

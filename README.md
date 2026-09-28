@@ -203,6 +203,8 @@ Storybook(launchRequest: launchRequest)
   }
 ```
 
+The most recent change wins: when the host passes a different appearance, open pages switch to it, replacing one chosen with the toggle.
+
 The toggle exposes the accessibility identifier `storybook.appearance.toggle`.
 
 ## Maintainers

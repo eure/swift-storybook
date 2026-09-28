@@ -142,10 +142,12 @@ struct BookPageDestination: View {
 
   @State private var selectedAppearance: StorybookAppearance?
 
+  private var defaultAppearance: StorybookAppearance {
+    appearanceConfiguration.initialAppearance ?? StorybookAppearance(inheritedColorScheme)
+  }
+
   private var appearance: StorybookAppearance {
-    selectedAppearance
-      ?? appearanceConfiguration.initialAppearance
-      ?? StorybookAppearance(inheritedColorScheme)
+    selectedAppearance ?? defaultAppearance
   }
 
   var body: some View {
@@ -181,6 +183,10 @@ struct BookPageDestination: View {
     }
     .onChange(of: appearance) { newValue in
       appearanceConfiguration.onChange?(newValue)
+    }
+    // The most recent change wins: a new host appearance replaces a toggled one.
+    .onChange(of: defaultAppearance) { _ in
+      selectedAppearance = nil
     }
   }
 }
