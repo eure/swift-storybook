@@ -130,7 +130,8 @@ private enum StorybookLaunchFailure {
             "Multiple pages share this exact name and source location. Give each page a unique name."
         }
         if selector.fileID != nil {
-          return "More than one Storybook page matched the request. Add a candidate line number."
+          return
+            "More than one Storybook page matched the request. Add a candidate line number."
         }
         return
           "More than one Storybook page matched the request. Add a candidate file ID and, when needed, its line number."
@@ -217,7 +218,8 @@ private struct BookContainer: View {
 /// Owns catalog navigation, search, settings, and page history presentation.
 private struct BookCatalogView: View {
 
-  private static let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
+  private static let userDefaults =
+    UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
 
   struct UniqueBox<T>: Hashable {
 
@@ -250,6 +252,16 @@ private struct BookCatalogView: View {
   @State private var showSettings: Bool = false
   @State private var path: NavigationPath
 
+  @Environment(\.colorScheme) private var inheritedColorScheme
+
+  @State var overrideColorScheme: ColorScheme?
+
+  @State var appearanceContextStorage: AppearanceContext.Storage = .init()
+
+  private var activeColorScheme: ColorScheme {
+    overrideColorScheme ?? inheritedColorScheme
+  }
+
   @MainActor
   init(
     store: BookStore,
@@ -264,6 +276,7 @@ private struct BookCatalogView: View {
       initialPath.append(UniqueBox(value: initialPage))
     }
     self._path = .init(initialValue: initialPath)
+
   }
 
   var body: some View {
@@ -306,7 +319,7 @@ private struct BookCatalogView: View {
 
         store.book
       }
-      .navigationTitle(store.title)
+      .preferredColorScheme(overrideColorScheme)
       .searchable(text: $query, prompt: "Search")
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
@@ -314,6 +327,61 @@ private struct BookCatalogView: View {
             showSettings = true
           } label: {
             Image(systemName: "gearshape.fill")
+          }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+
+          let button = Button {
+            toggleAppearance()
+          } label: {
+            Label(
+              title: {
+                Text("Toggle")
+              },
+              icon: {
+                Image(
+                  systemName: {
+                    switch activeColorScheme {
+                    case .light:
+                      return "sun.max"
+                    case .dark:
+                      return "moon"
+                    @unknown default:
+                      return "sun.max"
+                    }
+                  }()
+                )
+              }
+            )
+
+          }
+          .accessibilityLabel("Appearance")
+          .accessibilityValue(
+            {
+              switch activeColorScheme {
+              case .light:
+                return "Light"
+              case .dark:
+                return "Dark"
+              @unknown default:
+                return "Light"
+              }
+            }()
+          )
+          .accessibilityIdentifier("storybook.appearance.toggle")
+
+          if overrideColorScheme != nil {
+            if #available(iOS 26, *) {
+              button
+                .buttonStyle(.glassProminent)
+            } else {
+              button
+                .buttonStyle(.borderedProminent)
+            }
+
+          } else {
+            button
+              .buttonStyle(.plain)
           }
         }
       }
@@ -326,6 +394,19 @@ private struct BookCatalogView: View {
       }
     }
     .environment(\.bookContext, store)
+    .environment(
+      \.appearanceContext,
+       .init(
+         overrideColorScheme: overrideColorScheme,
+         storage: appearanceContextStorage
+       )
+    )
+    .onChange(
+      of: appearanceContextStorage.count,
+      { _, _ in
+        toggleAppearance()
+      }
+    )
     .onAppear {
       guard shouldAutoOpenLastPage, autoOpenLastPage else {
         return
@@ -360,7 +441,23 @@ private struct BookCatalogView: View {
 
           self.result = result
         }
-      })
+      }
+    )
+  }
+
+  private func toggleAppearance() {
+    if overrideColorScheme != nil {
+      self.overrideColorScheme = nil
+    } else {
+      switch inheritedColorScheme {
+      case .light:
+        overrideColorScheme = .dark
+      case .dark:
+        overrideColorScheme = .light
+      @unknown default:
+        break
+      }
+    }
   }
 }
 
@@ -466,5 +563,27 @@ final class _ViewController<Content: View>: UIViewController {
     hosting.didMove(toParent: self)
 
   }
+
+}
+
+@available(iOS 26, *)
+#Preview {
+
+  @Previewable @State var flag = false
+
+  NavigationStack {
+
+    Color.purple
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Toggle(isOn: $flag) {
+            Label("Hoge", systemImage: "sun.max")
+          }
+        }
+
+      }
+
+  }
+  //  .preferredColorScheme(.dark)
 
 }

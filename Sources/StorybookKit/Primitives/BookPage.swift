@@ -135,7 +135,9 @@ enum StorybookViewPortPreview {
 struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
-
+  @Environment(\.appearanceContext) private var appearanceContext
+  @Environment(\.colorScheme) private var colorScheme
+    
   let page: BookPage
 
   var body: some View {
@@ -148,10 +150,54 @@ struct BookPageDestination: View {
         Display(content: page.destination)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color(uiColor: .systemBackground))
     .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
     .listStyle(.plain)
     .navigationTitle(page.title)
     .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) { 
+        let button = Button {
+          self.appearanceContext?.toggle()
+        } label: {
+          Label(
+            title: {
+              Text("Toggle")
+            },
+            icon: {
+              Image(
+                systemName: {
+                  switch colorScheme {
+                  case .light:
+                    return "sun.max"
+                  case .dark:
+                    return "moon"
+                  @unknown default:
+                    return "sun.max"
+                  }
+                }()
+              )
+            }
+          )
+        }
+        
+        if appearanceContext?.overrideColorScheme != nil {
+          if #available(iOS 26, *) {
+            button
+              .buttonStyle(.glassProminent)
+          } else {
+            button
+              .buttonStyle(.borderedProminent)
+          }
+
+        } else {
+          button
+            .buttonStyle(.plain)
+        }
+      }      
+    }
+    
     .onAppear {
       context?.onOpen(pageID: page.id)
     }

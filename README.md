@@ -190,6 +190,14 @@ storybook.page|<name-byte-count>:<name>|<fileID-byte-count>:<fileID>|<line>
 
 The counts are UTF-8 byte counts. This lets automation prove that a qualified request opened the intended page before taking a screenshot.
 
+## Appearance
+
+Each page has a Light / Dark toggle in its navigation bar. A page opens in the host's appearance, and a tap switches only that page, including UIKit views inside it, without relaunching the app. The catalog and other pages keep the host's appearance.
+
+The toggle sets the SwiftUI color scheme of the page's content. A SwiftUI sheet presented from the page inherits it for its content, but its background keeps the host's appearance, and alerts keep the host's appearance. To check presented UI, change the host's appearance instead.
+
+The toggle exposes the accessibility identifier `storybook.appearance.toggle`.
+
 ## Maintainers
 
 - [Hiroshi Kimura (Muukii)](https://github.com/muukii)
