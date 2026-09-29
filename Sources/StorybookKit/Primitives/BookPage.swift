@@ -135,16 +135,10 @@ enum StorybookViewPortPreview {
 struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
-  @Environment(\.colorScheme) private var inheritedColorScheme
-
+  @Environment(\.appearanceContext) private var appearanceContext
+  @Environment(\.colorScheme) private var colorScheme
+    
   let page: BookPage
-
-  /// The color scheme toggled on this page; `nil` inherits the host's.
-  @State private var toggledColorScheme: ColorScheme?
-
-  private var colorScheme: ColorScheme {
-    toggledColorScheme ?? inheritedColorScheme
-  }
 
   var body: some View {
     Group {
@@ -158,25 +152,52 @@ struct BookPageDestination: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(uiColor: .systemBackground))
-    .environment(\.colorScheme, colorScheme)
     .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
     .listStyle(.plain)
     .navigationTitle(page.title)
     .navigationBarTitleDisplayMode(.inline)
-    // The iOS 26 navigation bar is transparent, so its title follows the page.
-    .toolbarColorScheme(colorScheme, for: .navigationBar)
     .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          toggledColorScheme = colorScheme == .dark ? .light : .dark
+      ToolbarItem(placement: .topBarTrailing) { 
+        let button = Button {
+          self.appearanceContext?.toggle()
         } label: {
-          Image(systemName: colorScheme == .dark ? "moon" : "sun.max")
+          Label(
+            title: {
+              Text("Toggle")
+            },
+            icon: {
+              Image(
+                systemName: {
+                  switch colorScheme {
+                  case .light:
+                    return "sun.max"
+                  case .dark:
+                    return "moon"
+                  @unknown default:
+                    return "sun.max"
+                  }
+                }()
+              )
+            }
+          )
         }
-        .accessibilityLabel("Appearance")
-        .accessibilityValue(colorScheme == .dark ? "Dark" : "Light")
-        .accessibilityIdentifier("storybook.appearance.toggle")
-      }
+        
+        if appearanceContext?.overrideColorScheme != nil {
+          if #available(iOS 26, *) {
+            button
+              .buttonStyle(.glassProminent)
+          } else {
+            button
+              .buttonStyle(.borderedProminent)
+          }
+
+        } else {
+          button
+            .buttonStyle(.plain)
+        }
+      }      
     }
+    
     .onAppear {
       context?.onOpen(pageID: page.id)
     }

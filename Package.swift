@@ -5,9 +5,9 @@ import PackageDescription
 let package = Package(
   name: "Storybook",
   platforms: [
-    .iOS(.v16),
-    .macCatalyst(.v15),
-    .macOS(.v10_15),
+    .iOS(.v17),
+    .macCatalyst(.v17),
+    .macOS(.v14),
   ],
   products: [
     .library(name: "StorybookKit", targets: ["StorybookKit"]),
