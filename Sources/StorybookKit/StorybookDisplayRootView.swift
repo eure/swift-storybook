@@ -254,6 +254,8 @@ private struct BookCatalogView: View {
 
   @Environment(\.colorScheme) private var inheritedColorScheme
 
+  @Environment(\.storybook_targetViewController) private var targetViewController
+
   @State var overrideColorScheme: ColorScheme?
 
   @State var appearanceContextStorage: AppearanceContext.Storage = .init()
@@ -407,6 +409,15 @@ private struct BookCatalogView: View {
         toggleAppearance()
       }
     )
+    .onChange(of: overrideColorScheme, initial: true) { _, newValue in
+      let style: UIUserInterfaceStyle = switch newValue {
+      case .light?: .light
+      case .dark?: .dark
+      case nil: .unspecified
+      @unknown default: .unspecified
+      }
+      targetViewController?.children.forEach { $0.overrideUserInterfaceStyle = style }
+    }
     .onAppear {
       guard shouldAutoOpenLastPage, autoOpenLastPage else {
         return
