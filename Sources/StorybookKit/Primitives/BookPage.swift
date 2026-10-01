@@ -181,7 +181,21 @@ struct BookPageDestination: View {
             }
           )
         }
-        
+        .accessibilityLabel("Appearance")
+        .accessibilityValue(
+          {
+            switch colorScheme {
+            case .light:
+              return "Light"
+            case .dark:
+              return "Dark"
+            @unknown default:
+              return "Light"
+            }
+          }()
+        )
+        .accessibilityIdentifier("storybook.page.appearance.toggle")
+
         if appearanceContext?.overrideColorScheme != nil {
           if #available(iOS 26, *) {
             button
