@@ -19,17 +19,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if canImport(UIKit)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 import Foundation
 
 public enum BookGenerator {
 
+  #if canImport(UIKit)
   public static func randomColor() -> UIColor {
     let red = CGFloat(Int.random(in: 0 ... 255))
     let green = CGFloat(Int.random(in: 0 ... 255))
     let blue = CGFloat(Int.random(in: 0 ... 255))
     return UIColor.init(red: red / 255, green: green / 255, blue: blue / 255, alpha: 1.0)
   }
+
+  #elseif os(macOS)
+  /// Returns a random opaque color for an AppKit preview fixture.
+  public static func randomColor() -> NSColor {
+    NSColor(
+      red: CGFloat.random(in: 0 ... 1),
+      green: CGFloat.random(in: 0 ... 1),
+      blue: CGFloat.random(in: 0 ... 1),
+      alpha: 1
+    )
+  }
+  #endif
 
   public static func loremIpsum(length: Int) -> String {
     BookLorem.ipsum(length)

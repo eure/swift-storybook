@@ -1,4 +1,4 @@
-# Storybook for iOS
+# Storybook for iOS and macOS
 
 Turn the `#Preview` declarations already in your app into an in-app component catalog.
 
@@ -92,9 +92,79 @@ struct ContentView: View {
 }
 ```
 
+### Native macOS host
+
+Native macOS hosting requires macOS 14 or later. Link `StorybookKit` into a
+SwiftUI or AppKit app and embed `Storybook()` in its window, using
+`NSHostingController` when the host uses AppKit. SwiftUI, `NSView`, and
+`NSViewController` previews are discovered from the app and its linked dynamic
+frameworks. Controller previews open as native sheets.
+
+The macOS catalog uses a resizable sidebar for preview folders, history, and
+search, with the selected preview in the detail pane. The toolbar can hide or
+show the sidebar. An exact-page launch selects and reveals its catalog row.
+
+```swift
+import AppKit
+import StorybookKit
+import SwiftUI
+
+@main
+struct CatalogApp: App {
+  private let launchRequest = StorybookLaunchRequest(
+    arguments: ProcessInfo.processInfo.arguments
+  ) ?? .catalog
+
+  var body: some Scene {
+    WindowGroup {
+      Storybook(launchRequest: launchRequest)
+    }
+  }
+}
+
+#Preview("Native button") {
+  NSButton(title: "Continue", target: nil, action: nil)
+}
+```
+
+The [macOS demo](Development/MacDemo) is a separate SwiftPM executable package
+that uses the repository as a local dependency. Build it from the repository root:
+
+```sh
+swift build --package-path Development/MacDemo
+```
+
+The demo includes interactive SwiftUI and AppKit counters and a dismissible
+controller sheet.
+The existing iOS demo remains in `Development/Storybook.xcodeproj`.
+
+`Book`, `BookPage`, `BookPageSelector`, and `StorybookLaunchRequest` use the same
+API on both platforms, including exact-page arguments and accessibility
+identifiers. Native preview and image-export types follow the platform:
+
+| Export content | iOS | macOS |
+| --- | --- | --- |
+| SwiftUI | `StorybookViewportRenderer` | `StorybookViewportRenderer` |
+| Native view | `StorybookUIViewRenderer` / `StorybookUIView` | `StorybookNSViewRenderer` / `StorybookNSView` |
+| Presented controller | `StorybookPresentedViewControllerRenderer` / `UIViewController` | `StorybookPresentedViewControllerRenderer` / `NSViewController` |
+| Exported image | `StorybookExportImage.image: UIImage` | `StorybookExportImage.image: NSImage` |
+| Safe-area insets | `UIEdgeInsets` | `NSEdgeInsets` |
+
+Native view export requires a host attached to a live window; the preview factory
+returns an unattached view. Controller export
+captures the presented window's content area, without the window's title bar.
+On macOS, image export preserves the visible viewport of native scroll views;
+it does not expand their documents into a full-content image.
+The included agent visual-check and viewport-artifact workflow below targets
+the iOS Simulator; use the macOS demo and native macOS window tooling for Mac
+checks.
+
 ## Preview discovery
 
 Storybook automatically discovers previews in the app executable and linked dynamic frameworks.
+
+Each catalog entry currently renders one preview. Parameterized or grouped
+preview declarations show an unsupported-content diagnostic.
 
 > [!IMPORTANT]
 > Previews in a static library may require the `-all_load` linker flag. Without it, the linker can remove preview symbols that appear unused, preventing Storybook from discovering them.

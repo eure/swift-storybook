@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import SwiftUI
 import UIKit
 
@@ -670,3 +671,5 @@ public enum StorybookPresentedViewControllerRenderError: Error, Equatable, Local
     }
   }
 }
+
+#endif

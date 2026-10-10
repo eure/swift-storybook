@@ -27,7 +27,7 @@ struct SettingsView: View {
       }
       .navigationTitle("Settings")
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItem(placement: .confirmationAction) {
           Button {
             dismiss()
           } label: {

@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import SwiftUI
 
 struct _ViewControllerHost<ContentViewController: UIViewController>:
@@ -27,3 +28,5 @@ struct _ViewControllerHost<ContentViewController: UIViewController>:
   }
 
 }
+
+#endif

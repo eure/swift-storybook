@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if canImport(UIKit)
 import SwiftUI
 
 public struct BookAction: BookView {
@@ -51,3 +52,5 @@ public struct BookAction: BookView {
   }
 
 }
+
+#endif
