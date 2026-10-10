@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 public struct StorybookDisplayRootView: View {
 
@@ -215,6 +219,9 @@ private struct BookContainer: View {
   }
 }
 
+#if os(macOS)
+private typealias BookCatalogView = BookSidebarCatalogView
+#else
 /// Owns catalog navigation, search, settings, and page history presentation.
 private struct BookCatalogView: View {
 
@@ -324,7 +331,7 @@ private struct BookCatalogView: View {
       .preferredColorScheme(overrideColorScheme)
       .searchable(text: $query, prompt: "Search")
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
+        ToolbarItem(placement: .navigation) {
           Button {
             showSettings = true
           } label: {
@@ -393,6 +400,9 @@ private struct BookCatalogView: View {
       }
       .sheet(isPresented: $showSettings) {
         SettingsView()
+          #if os(macOS)
+          .frame(minWidth: 400, minHeight: 220)
+          #endif
       }
     }
     .environment(\.bookContext, store)
@@ -471,6 +481,7 @@ private struct BookCatalogView: View {
     }
   }
 }
+#endif
 
 /// Presents an actionable launch diagnostic and deterministic candidates.
 private struct StorybookLaunchFailureView: View {
@@ -538,6 +549,7 @@ private struct SearchResultNodeView: View {
   }
 }
 
+#if canImport(UIKit)
 final class _ViewController<Content: View>: UIViewController {
 
   private let content: Content
@@ -598,3 +610,5 @@ final class _ViewController<Content: View>: UIViewController {
   //  .preferredColorScheme(.dark)
 
 }
+
+#endif

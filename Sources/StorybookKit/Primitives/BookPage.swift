@@ -21,7 +21,11 @@
 
 import Foundation
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 public struct DeclarationIdentifier: Hashable, Codable, Sendable {
 
@@ -124,10 +128,16 @@ public struct BookPage: BookView, Identifiable, Sendable {
   }
 }
 
+/// Retains a preview's native content kind until a platform renderer consumes it.
 enum StorybookViewPortPreview {
   case viewport(@MainActor () -> AnyView)
+  #if canImport(UIKit)
   case uiView(@MainActor () -> UIView)
   case presentedViewController(@MainActor () -> UIViewController)
+  #elseif os(macOS)
+  case nsView(@MainActor () -> NSView)
+  case presentedViewController(@MainActor () -> NSViewController)
+  #endif
   case unsupported(String)
 }
 
@@ -137,6 +147,14 @@ struct BookPageDestination: View {
   @Environment(\.bookContext) private var context
   @Environment(\.appearanceContext) private var appearanceContext
   @Environment(\.colorScheme) private var colorScheme
+
+  private var appearanceToolbarPlacement: ToolbarItemPlacement {
+    #if canImport(UIKit)
+    .topBarTrailing
+    #else
+    .primaryAction
+    #endif
+  }
     
   let page: BookPage
 
@@ -151,13 +169,19 @@ struct BookPageDestination: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    #if canImport(UIKit)
     .background(Color(uiColor: .systemBackground))
+    #else
+    .background(Color(nsColor: .windowBackgroundColor))
+    #endif
     .accessibilityIdentifier(page.descriptor.accessibilityIdentifier)
     .listStyle(.plain)
     .navigationTitle(page.title)
+    #if canImport(UIKit)
     .navigationBarTitleDisplayMode(.inline)
+    #endif
     .toolbar {
-      ToolbarItem(placement: .topBarTrailing) { 
+      ToolbarItem(placement: appearanceToolbarPlacement) {
         let button = Button {
           self.appearanceContext?.toggle()
         } label: {
@@ -197,7 +221,7 @@ struct BookPageDestination: View {
         .accessibilityIdentifier("storybook.page.appearance.toggle")
 
         if appearanceContext?.overrideColorScheme != nil {
-          if #available(iOS 26, *) {
+          if #available(iOS 26, macOS 26, *) {
             button
               .buttonStyle(.glassProminent)
           } else {

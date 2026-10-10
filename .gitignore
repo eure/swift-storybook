@@ -41,6 +41,8 @@ playground.xcworkspace
 # Package.pins
 # Package.resolved
 .build/
+/.tmp/
+/dist/
 
 # CocoaPods
 #

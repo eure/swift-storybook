@@ -19,14 +19,11 @@ struct SearchBar: View {
         Image(systemName: "magnifyingglass")
           .foregroundColor(.gray)
 
-        if #available(iOS 15, *) {
-          TextField("Search", text: $text)
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
-        } else {
-          TextField("Search", text: $text)
-            .autocorrectionDisabled()
-        }
+        TextField("Search", text: $text)
+          .autocorrectionDisabled()
+          #if canImport(UIKit)
+          .textInputAutocapitalization(.never)
+          #endif
 
         if !text.isEmpty {
           Button {

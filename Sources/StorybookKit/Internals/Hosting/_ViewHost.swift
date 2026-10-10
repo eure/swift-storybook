@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import SwiftUI
 
 struct _ViewHost<ContentView: UIView>:
@@ -86,3 +87,5 @@ final class _Label<ContentView: UIView>: UILabel {
   }
 
 }
+
+#endif

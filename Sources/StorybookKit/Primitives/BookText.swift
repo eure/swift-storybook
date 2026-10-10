@@ -24,6 +24,7 @@ import SwiftUI
 public struct BookText: View {
 
   public let text: String
+  #if canImport(UIKit)
   public var foregroundColor: UIColor = {
     if #available(iOS 13.0, *) {
       return .label
@@ -33,6 +34,10 @@ public struct BookText: View {
   }()
 
   public var font: UIFont = .preferredFont(forTextStyle: .body)
+  #elseif os(macOS)
+  public var foregroundColor: NSColor = .labelColor
+  public var font: NSFont = .preferredFont(forTextStyle: .body)
+  #endif
 
   public init(_ text: String) {
     self.text = text

@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if canImport(UIKit)
 import SwiftUI
 
 /// A component descriptor that previewing with push presentation.
@@ -49,3 +50,5 @@ public struct BookPush: BookView {
 
   }
 }
+
+#endif
