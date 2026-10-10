@@ -128,20 +128,14 @@ struct CatalogApp: App {
 ```
 
 The [macOS demo](Development/MacDemo) is a separate SwiftPM executable package
-that uses the repository as a local dependency. From the repository root, run:
+that uses the repository as a local dependency. Build it from the repository root:
 
 ```sh
-./script/build_and_run.sh
-./script/build_and_run.sh --verify --storybook "macOS SwiftUI Counter"
-./script/build_and_run.sh --storybook "macOS AppKit View"
-./script/build_and_run.sh --storybook "macOS AppKit Controller"
+swift build --package-path Development/MacDemo
 ```
 
-The script builds and stages `dist/StorybookMacDemo.app`, then opens the bundle
-with Launch Services. `--build-only` builds the bundle without launching;
-`--verify` also checks that its process starts. `--debug`, `--logs`, and
-`--telemetry` attach a debugger or stream logs after launching. The demo includes
-interactive SwiftUI and AppKit counters and a dismissible controller sheet.
+The demo includes interactive SwiftUI and AppKit counters and a dismissible
+controller sheet.
 The existing iOS demo remains in `Development/Storybook.xcodeproj`.
 
 `Book`, `BookPage`, `BookPageSelector`, and `StorybookLaunchRequest` use the same
