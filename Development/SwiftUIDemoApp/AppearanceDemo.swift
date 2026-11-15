@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import SwiftUI
 import UIKit
 
@@ -163,3 +164,4 @@ private struct AppearancePresentationDemo: View {
   return ContentView()
 
 }
+#endif

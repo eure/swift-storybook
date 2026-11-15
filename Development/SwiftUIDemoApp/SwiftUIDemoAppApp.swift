@@ -27,12 +27,15 @@ import SwiftUI
 struct SwiftUIDemoAppApp: App {
 
   private let storybookLaunchRequest: StorybookLaunchRequest?
+  #if canImport(UIKit)
   private let viewportExportPreparationFailure: String?
   private let viewportExportRequest: ViewportExportRequest
+  #endif
 
   init() {
     let arguments = ProcessInfo.processInfo.arguments
     storybookLaunchRequest = .init(arguments: arguments)
+    #if canImport(UIKit)
     let viewportExportRequest = ViewportExportRequest(arguments: arguments)
     self.viewportExportRequest = viewportExportRequest
 
@@ -46,10 +49,12 @@ struct SwiftUIDemoAppApp: App {
     } else {
       viewportExportPreparationFailure = nil
     }
+    #endif
   }
 
   var body: some Scene {
     WindowGroup {
+      #if canImport(UIKit)
       switch viewportExportRequest {
       case .disabled:
         if let storybookLaunchRequest {
@@ -76,6 +81,13 @@ struct SwiftUIDemoAppApp: App {
           )
         }
       }
+      #else
+      Storybook(launchRequest: storybookLaunchRequest ?? .catalog)
+        .frame(minWidth: 640, minHeight: 480)
+      #endif
     }
+    #if os(macOS)
+    .defaultSize(width: 960, height: 700)
+    #endif
   }
 }

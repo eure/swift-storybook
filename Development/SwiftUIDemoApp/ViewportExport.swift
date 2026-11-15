@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import CryptoKit
 import Foundation
 import StorybookKit
@@ -396,3 +397,4 @@ enum StorybookImageRenderMode: String, Codable {
   case viewport
   case presentedViewController
 }
+#endif
