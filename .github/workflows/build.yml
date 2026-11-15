@@ -24,3 +24,7 @@ jobs:
         run: swift test
       - name: Build native macOS host
         run: swift build --package-path Development/MacDemo
+      - name: Build multiplatform demo for macOS
+        run: xcodebuild -project Development/Storybook.xcodeproj -scheme SwiftUIDemoApp -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+      - name: Build multiplatform demo for iOS
+        run: xcodebuild -project Development/Storybook.xcodeproj -scheme SwiftUIDemoApp -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

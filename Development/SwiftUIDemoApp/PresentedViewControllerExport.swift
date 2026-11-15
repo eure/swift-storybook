@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import StorybookKit
 import SwiftUI
 import UIKit
@@ -152,3 +153,4 @@ struct StorybookPresentedViewControllerExportHost: UIViewControllerRepresentable
     }
   }
 }
+#endif

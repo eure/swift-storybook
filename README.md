@@ -127,16 +127,17 @@ struct CatalogApp: App {
 }
 ```
 
-The [macOS demo](Development/MacDemo) is a separate SwiftPM executable package
-that uses the repository as a local dependency. Build it from the repository root:
+Open `Development/Storybook.xcodeproj`, select the `SwiftUIDemoApp` scheme, and
+choose **My Mac** to run the demo as a native macOS app. The same scheme also
+runs on iOS. SwiftUI previews are shared, and the Mac catalog includes native
+AppKit counters and a dismissible controller sheet.
+
+The smaller [macOS host](Development/MacDemo) remains available as a standalone
+SwiftPM executable package that uses the repository as a local dependency:
 
 ```sh
 swift build --package-path Development/MacDemo
 ```
-
-The demo includes interactive SwiftUI and AppKit counters and a dismissible
-controller sheet.
-The existing iOS demo remains in `Development/Storybook.xcodeproj`.
 
 `Book`, `BookPage`, `BookPageSelector`, and `StorybookLaunchRequest` use the same
 API on both platforms, including exact-page arguments and accessibility

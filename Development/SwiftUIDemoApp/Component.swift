@@ -20,7 +20,9 @@
 // THE SOFTWARE.
 
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 #Preview("Circle") {
   Circle()
@@ -40,6 +42,7 @@ import UIKit
     .frame(width: 100, height: 100)
 }
 
+#if canImport(UIKit)
 #Preview {
   UISwitch()
 }
@@ -128,3 +131,4 @@ private func longScrollingView() -> UIView {
 
   return root
 }
+#endif
