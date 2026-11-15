@@ -132,15 +132,6 @@ choose **My Mac** to run the demo as a native macOS app. The same scheme also
 runs on iOS. SwiftUI previews are shared, and the Mac catalog includes native
 AppKit counters and a dismissible controller sheet.
 
-From the repository root, build and launch the Mac demo with:
-
-```sh
-./script/build_and_run.sh
-```
-
-The script also accepts Storybook launch arguments, for example
-`./script/build_and_run.sh --storybook 'macOS AppKit View'`.
-
 The smaller [macOS host](Development/MacDemo) remains available as a standalone
 SwiftPM executable package that uses the repository as a local dependency:
 
