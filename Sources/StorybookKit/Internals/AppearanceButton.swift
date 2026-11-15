@@ -32,7 +32,7 @@ struct AppearanceButton: View {
 
     Menu {
       Picker("Appearance", selection: $context.overrideColorScheme) {
-        Text("System")
+        Label("System", systemImage: "desktopcomputer")
           .tag(nil as ColorScheme?)
 
         Label("Light", systemImage: "sun.max")
