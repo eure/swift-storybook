@@ -9,7 +9,6 @@ struct BookSidebarCatalogView: View {
   private static let userDefaults = UserDefaults(suiteName: "jp.eure.storybook2") ?? .standard
 
   @ObservedObject private var store: BookStore
-  @Environment(\.colorScheme) private var inheritedColorScheme
   @Environment(\.storybook_targetViewController) private var targetViewController
   @AppStorage("autoOpenLastPage", store: BookSidebarCatalogView.userDefaults)
   private var autoOpenLastPage = true
@@ -23,8 +22,7 @@ struct BookSidebarCatalogView: View {
   @State private var results: [Book.Node] = []
   @State private var showSettings = false
   @State private var didRestoreSelection = false
-  @State private var appearanceContextStorage = AppearanceContext.Storage()
-  @State private var overrideColorScheme: ColorScheme?
+  @State private var appearanceContext = AppearanceContext()
 
   init(store: BookStore, initialPage: BookPage?, shouldAutoOpenLastPage: Bool) {
     self.store = store
@@ -65,20 +63,10 @@ struct BookSidebarCatalogView: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .navigationSplitViewStyle(.balanced)
-    .preferredColorScheme(overrideColorScheme)
+    .preferredColorScheme(appearanceContext.overrideColorScheme)
     .environment(\.bookContext, store)
-    .environment(
-      \.appearanceContext,
-      .init(overrideColorScheme: overrideColorScheme, storage: appearanceContextStorage)
-    )
-    .onChange(of: appearanceContextStorage.count) { _, _ in
-      if overrideColorScheme != nil {
-        overrideColorScheme = nil
-      } else {
-        overrideColorScheme = inheritedColorScheme == .dark ? .light : .dark
-      }
-    }
-    .onChange(of: overrideColorScheme, initial: true) { _, value in
+    .environment(\.appearanceContext, appearanceContext)
+    .onChange(of: appearanceContext.overrideColorScheme, initial: true) { _, value in
       // Native fixtures must receive the same override as SwiftUI content.
       let appearance = value.flatMap { NSAppearance(named: $0 == .dark ? .darkAqua : .aqua) }
       targetViewController?.children.forEach { $0.view.appearance = appearance }

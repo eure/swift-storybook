@@ -259,17 +259,9 @@ private struct BookCatalogView: View {
   @State private var showSettings: Bool = false
   @State private var path: NavigationPath
 
-  @Environment(\.colorScheme) private var inheritedColorScheme
-
   @Environment(\.storybook_targetViewController) private var targetViewController
 
-  @State var overrideColorScheme: ColorScheme?
-
-  @State var appearanceContextStorage: AppearanceContext.Storage = .init()
-
-  private var activeColorScheme: ColorScheme {
-    overrideColorScheme ?? inheritedColorScheme
-  }
+  @State private var appearanceContext = AppearanceContext()
 
   @MainActor
   init(
@@ -328,7 +320,7 @@ private struct BookCatalogView: View {
 
         store.book
       }
-      .preferredColorScheme(overrideColorScheme)
+      .preferredColorScheme(appearanceContext.overrideColorScheme)
       .searchable(text: $query, prompt: "Search")
       .toolbar {
         ToolbarItem(placement: .navigation) {
@@ -339,59 +331,8 @@ private struct BookCatalogView: View {
           }
         }
         ToolbarItem(placement: .topBarTrailing) {
-
-          let button = Button {
-            toggleAppearance()
-          } label: {
-            Label(
-              title: {
-                Text("Toggle")
-              },
-              icon: {
-                Image(
-                  systemName: {
-                    switch activeColorScheme {
-                    case .light:
-                      return "sun.max"
-                    case .dark:
-                      return "moon"
-                    @unknown default:
-                      return "sun.max"
-                    }
-                  }()
-                )
-              }
-            )
-
-          }
-          .accessibilityLabel("Appearance")
-          .accessibilityValue(
-            {
-              switch activeColorScheme {
-              case .light:
-                return "Light"
-              case .dark:
-                return "Dark"
-              @unknown default:
-                return "Light"
-              }
-            }()
-          )
-          .accessibilityIdentifier("storybook.appearance.toggle")
-
-          if overrideColorScheme != nil {
-            if #available(iOS 26, *) {
-              button
-                .buttonStyle(.glassProminent)
-            } else {
-              button
-                .buttonStyle(.borderedProminent)
-            }
-
-          } else {
-            button
-              .buttonStyle(.plain)
-          }
+          AppearanceButton(context: appearanceContext)
+            .accessibilityIdentifier("storybook.appearance.toggle")
         }
       }
       .navigationDestination(for: UniqueBox<BookPage>.self) { page in
@@ -406,20 +347,8 @@ private struct BookCatalogView: View {
       }
     }
     .environment(\.bookContext, store)
-    .environment(
-      \.appearanceContext,
-       .init(
-         overrideColorScheme: overrideColorScheme,
-         storage: appearanceContextStorage
-       )
-    )
-    .onChange(
-      of: appearanceContextStorage.count,
-      { _, _ in
-        toggleAppearance()
-      }
-    )
-    .onChange(of: overrideColorScheme, initial: true) { _, newValue in
+    .environment(\.appearanceContext, appearanceContext)
+    .onChange(of: appearanceContext.overrideColorScheme, initial: true) { _, newValue in
       let style: UIUserInterfaceStyle = switch newValue {
       case .light?: .light
       case .dark?: .dark
@@ -466,20 +395,6 @@ private struct BookCatalogView: View {
     )
   }
 
-  private func toggleAppearance() {
-    if overrideColorScheme != nil {
-      self.overrideColorScheme = nil
-    } else {
-      switch inheritedColorScheme {
-      case .light:
-        overrideColorScheme = .dark
-      case .dark:
-        overrideColorScheme = .light
-      @unknown default:
-        break
-      }
-    }
-  }
 }
 #endif
 
