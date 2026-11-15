@@ -27,30 +27,22 @@ public protocol BookProvider {
   static var bookBody: BookPage { get }
 }
 
-struct AppearanceContext: Equatable {
-      
-  @Observable
-  final class Storage: Equatable {
-    
-    static func == (lhs: Storage, rhs: Storage) -> Bool {
-      lhs === rhs
-    }
-    
-    var count: Int = 0    
-  }
-     
-  let storage: Storage
+@Observable
+final class AppearanceContext {
+
   var overrideColorScheme: ColorScheme?
-  
-  init(overrideColorScheme: ColorScheme?, storage: Storage) {
-    self.overrideColorScheme = overrideColorScheme
-    self.storage = storage
+
+  func toggle(relativeTo inheritedColorScheme: ColorScheme) {
+    switch overrideColorScheme ?? inheritedColorScheme {
+    case .light:
+      overrideColorScheme = .dark
+    case .dark:
+      overrideColorScheme = .light
+    @unknown default:
+      break
+    }
   }
 
-  func toggle() {
-    storage.count += 1
-  }
-  
 }
 
 extension EnvironmentValues {

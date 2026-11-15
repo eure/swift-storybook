@@ -146,7 +146,6 @@ struct BookPageDestination: View {
 
   @Environment(\.bookContext) private var context
   @Environment(\.appearanceContext) private var appearanceContext
-  @Environment(\.colorScheme) private var colorScheme
 
   private var appearanceToolbarPlacement: ToolbarItemPlacement {
     #if canImport(UIKit)
@@ -181,46 +180,12 @@ struct BookPageDestination: View {
     .navigationBarTitleDisplayMode(.inline)
     #endif
     .toolbar {
-      ToolbarItem(placement: appearanceToolbarPlacement) {
-        Button {
-          self.appearanceContext?.toggle()
-        } label: {
-          Label(
-            title: {
-              Text("Toggle")
-            },
-            icon: {
-              Image(
-                systemName: {
-                  switch colorScheme {
-                  case .light:
-                    return "sun.max"
-                  case .dark:
-                    return "moon"
-                  @unknown default:
-                    return "sun.max"
-                  }
-                }()
-              )
-            }
-          )
+      if let appearanceContext {
+        ToolbarItem(placement: appearanceToolbarPlacement) {
+          AppearanceButton(context: appearanceContext)
+            .accessibilityIdentifier("storybook.page.appearance.toggle")
         }
-        .labelStyle(.iconOnly)
-        .accessibilityLabel("Appearance")
-        .accessibilityValue(
-          {
-            switch colorScheme {
-            case .light:
-              return "Light"
-            case .dark:
-              return "Dark"
-            @unknown default:
-              return "Light"
-            }
-          }()
-        )
-        .accessibilityIdentifier("storybook.page.appearance.toggle")
-      }      
+      }
     }
     
     .onAppear {
