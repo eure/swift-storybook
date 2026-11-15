@@ -124,30 +124,12 @@ struct BookSidebarCatalogView: View {
             }
           }
         }
-        Section {
+        Section("Previews") {
           ForEach(store.book.contents) { node in
             NodeRow(
               node: node, path: ["catalog"], ancestors: [],
               expandedFolders: $expandedFolders
             )
-          }
-        } header: {
-          HStack {
-            Text("Previews")
-            Spacer()
-            Button {
-              let folders = Self.folderIDs(in: store.book.contents)
-              if folders.isSubset(of: expandedFolders) {
-                expandedFolders.subtract(folders)
-              } else {
-                expandedFolders.formUnion(folders)
-              }
-            } label: {
-              Image(systemName: "arrow.up.arrow.down")
-            }
-            .buttonStyle(.borderless)
-            .help("Expand or Collapse All Folders")
-            .accessibilityLabel("Expand or Collapse All Folders")
           }
         }
       } else {

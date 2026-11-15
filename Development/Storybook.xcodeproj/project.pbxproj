@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A70B8D120001000000000001 /* PreviewFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B8D120001000000000002 /* PreviewFixtures.swift */; };
 		4B8438DA2D4CE6C500BE1DA9 /* libStaticLibraryComponents.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B8438CC2D4CE44C00BE1DA9 /* libStaticLibraryComponents.a */; };
 		4B8438DE2D4CE6E400BE1DA9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B8438DD2D4CE6E400BE1DA9 /* SwiftUI.framework */; };
 		4B8438DF2D4CE6EC00BE1DA9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B8438DD2D4CE6E400BE1DA9 /* SwiftUI.framework */; };
@@ -56,9 +57,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A70B8D120001000000000002 /* PreviewFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewFixtures.swift; sourceTree = "<group>"; };
 		4B0BDD7C2A87A4A200CF2633 /* Storybook-ios */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "Storybook-ios"; path = ..; sourceTree = "<group>"; };
 		4B8438CC2D4CE44C00BE1DA9 /* libStaticLibraryComponents.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libStaticLibraryComponents.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		4B8438DD2D4CE6E400BE1DA9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/System/iOSSupport/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
+		4B8438DD2D4CE6E400BE1DA9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		4BA377A72D4CE2C500D4E565 /* SwiftUIDemoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftUIDemoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BA377D62D4CE2F000D4E565 /* DynamicFrameworkComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DynamicFrameworkComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -99,6 +101,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A70B8D120001000000000003 /* MacDemo */ = {
+			isa = PBXGroup;
+			children = (
+				A70B8D120001000000000002 /* PreviewFixtures.swift */,
+			);
+			name = MacDemo;
+			path = MacDemo/Sources/StorybookMacDemo;
+			sourceTree = "<group>";
+		};
 		4B0BDD7D2A87A4C800CF2633 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -112,6 +123,7 @@
 			children = (
 				4B0BDD7C2A87A4A200CF2633 /* Storybook-ios */,
 				4BA377A82D4CE2C500D4E565 /* SwiftUIDemoApp */,
+				A70B8D120001000000000003 /* MacDemo */,
 				4BA377D72D4CE2F000D4E565 /* DynamicFrameworkComponents */,
 				4B8438CD2D4CE44C00BE1DA9 /* StaticLibraryComponents */,
 				957A89322226610200CDD25D /* Products */,
@@ -290,6 +302,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A70B8D120001000000000001 /* PreviewFixtures.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -377,6 +390,7 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@executable_path/../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
@@ -413,6 +427,7 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@executable_path/../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
@@ -448,6 +463,7 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
@@ -489,6 +505,7 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
@@ -537,6 +554,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -560,7 +578,9 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = iphoneos;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -603,6 +623,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -619,7 +640,9 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				SDKROOT = iphoneos;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;

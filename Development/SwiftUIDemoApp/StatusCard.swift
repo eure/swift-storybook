@@ -109,6 +109,22 @@ struct DemoStatusCard: View {
     self.onAction = onAction
   }
 
+  private static var cardBackground: Color {
+    #if os(macOS)
+    Color(nsColor: .controlBackgroundColor)
+    #else
+    Color(uiColor: .secondarySystemGroupedBackground)
+    #endif
+  }
+
+  private static var separator: Color {
+    #if os(macOS)
+    Color(nsColor: .separatorColor)
+    #else
+    Color(uiColor: .separator)
+    #endif
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
       DemoStatusCardHeader(
@@ -136,12 +152,12 @@ struct DemoStatusCard: View {
     }
     .padding(24)
     .background(
-      Color(uiColor: .secondarySystemGroupedBackground),
+      Self.cardBackground,
       in: RoundedRectangle(cornerRadius: 24, style: .continuous)
     )
     .overlay {
       RoundedRectangle(cornerRadius: 24, style: .continuous)
-        .stroke(Color(uiColor: .separator).opacity(0.24))
+        .stroke(Self.separator.opacity(0.24))
     }
     .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
   }
@@ -232,7 +248,13 @@ private struct DemoStatusCardCanvas<Content: View>: View {
       .frame(maxWidth: 420)
       .padding(24)
       .frame(maxWidth: .infinity)
-      .background(Color(uiColor: .systemGroupedBackground))
+      .background {
+        #if os(macOS)
+        Color(nsColor: .windowBackgroundColor)
+        #else
+        Color(uiColor: .systemGroupedBackground)
+        #endif
+      }
   }
 }
 

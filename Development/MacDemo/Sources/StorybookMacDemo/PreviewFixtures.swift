@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftUI
 
@@ -110,3 +111,4 @@ private final class CounterViewController: NSViewController {
 #Preview("macOS AppKit Controller") {
   CounterViewController()
 }
+#endif
